@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
+from services.validator import validate_route_payload
 
 app = FastAPI(
     title="Waypoint Logistics Allocation Engine",
@@ -106,9 +107,25 @@ class OptimizeResponse(BaseModel):
     summary: OptimizeSummary
 
 
-class ValidateTripRequest(BaseModel):
-    trip: TripOutput
-    vehicle: VehicleInput
+class CandidateOrderPayload(BaseModel):
+    order_id: str = "ORD_001"
+    outlet_id: str = "OUT001"
+    brand: str = "Fresh"
+    district: str = "Colombo"
+    depot: str = "Peliyagoda"
+    temp_requirement: str = "ambient"
+    parking_constraint: str = "normal"
+    dock_type: str = "street"
+    weight_kg: float = 0.0
+    volume_m3: float = 0.0
+
+
+class ValidateTripPayload(BaseModel):
+    trip_id: int = 1
+    vehicle_id: str = "VEH001"
+    scenario: str = "S1"
+    orders: List[CandidateOrderPayload] = []
+    vehicle: Optional[Dict[str, Any]] = None
 
 
 class ValidationMetrics(BaseModel):
@@ -167,22 +184,20 @@ def optimize_trips(payload: OptimizeRequest):
 
 
 @app.post("/api/v1/validate", response_model=ValidationResponse)
-def validate_candidate_trip(trip_payload: ValidateTripRequest):
+def validate_candidate_trip(payload: ValidateTripPayload):
     """
     Candidate trip validator checking the 14 hard rules from check_allocation.py.
     Returns RAG metrics and rule violations.
     """
+    trip_data = {
+        "trip_id": payload.trip_id,
+        "vehicle_id": payload.vehicle_id,
+        "scenario": payload.scenario,
+        "orders": [o.model_dump() for o in payload.orders],
+    }
+    result = validate_route_payload(trip_data, payload.vehicle)
     return ValidationResponse(
-        is_valid=True,
-        violations=[],
-        metrics=ValidationMetrics(
-            total_weight_kg=trip_payload.trip.total_weight_kg,
-            total_volume_m3=trip_payload.trip.total_volume_m3,
-            total_duration_min=trip_payload.trip.total_duration_min,
-            fuel_consumed_l=trip_payload.trip.fuel_consumed_l,
-            weight_utilization_pct=0.0,
-            volume_utilization_pct=0.0,
-            time_utilization_pct=0.0,
-            rag_status="GREEN"
-        )
+        is_valid=result["is_valid"],
+        violations=result["violations"],
+        metrics=ValidationMetrics(**result["metrics"])
     )
