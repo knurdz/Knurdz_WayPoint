@@ -1,0 +1,231 @@
+// Waypoint Intelligent Enterprise — Master Database Schema
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  dispatcher
+  loader
+  driver
+  store
+}
+
+enum Brand {
+  Fresh
+  Style
+  Tech
+}
+
+enum VehicleType {
+  truck
+  van
+}
+
+enum Temperature {
+  ambient
+  reefer
+}
+
+enum VehicleStatus {
+  available
+  in_workshop
+}
+
+enum OrderStatus {
+  draft
+  confirmed
+  allocated
+  deferred
+  in_transit
+  delivered
+  disputed
+}
+
+enum PlanningBucket {
+  next_day
+  subsequent_run
+}
+
+enum StopStatus {
+  pending
+  en_route
+  arrived
+  unloading
+  completed
+  failed
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  outletId     String?
+  outlet       Outlet?  @relation(fields: [outletId], references: [outletId])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Outlet {
+  outletId          String     @id // e.g. "OUT001"
+  name              String
+  brand             Brand
+  district          String
+  depotId           String     // "Peliyagoda" or "Kandy"
+  dockType          String     @default("street")
+  parkingConstraint String     @default("normal") // "normal", "van_only", "mall_dock"
+  mallWindow        String?    // e.g. "09:00-11:00"
+  windowOpenTime    String?    @default("05:00")
+  windowCloseTime   String?    @default("07:30")
+  latitude          Float?
+  longitude         Float?
+  orders            Order[]
+  tripStops         TripStop[]
+  users             User[]
+
+  @@map("outlets")
+}
+
+model Vehicle {
+  vehicleId         String        @id // e.g. "VEH001"
+  type              VehicleType
+  temp              Temperature
+  weightCapKg       Float
+  volumeCapM3       Float
+  fuelType          String        @default("diesel")
+  kmPerL            Float
+  weeklyFuelQuotaL  Float
+  depotId           String        // "Peliyagoda" or "Kandy"
+  status            VehicleStatus @default(available)
+  trips             Trip[]
+
+  @@map("vehicles")
+}
+
+model Order {
+  orderId              String          @id // e.g. "ORD-92308"
+  outletId             String
+  outlet               Outlet          @relation(fields: [outletId], references: [outletId])
+  orderDate            DateTime        @db.Date
+  tempRequirement      Temperature     @default(ambient)
+  orderUnits           Int
+  weightKg             Float
+  volumeM3             Float
+  status               OrderStatus     @default(confirmed)
+  planningBucket       PlanningBucket  @default(next_day)
+  deferredYesterday    Boolean         @default(false)
+  daysSinceLastServed  Int             @default(1)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  items                OrderItem[]
+  tripStops            TripStop[]
+  deferrals            DeferralRecord[]
+  podRecords           PodRecord[]
+
+  @@index([orderDate, status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  sku         String
+  description String
+  quantity    Int
+  weightKg    Float
+  volumeM3    Float
+
+  @@map("order_items")
+}
+
+model Trip {
+  tripId           String     @id // e.g. "TRIP-001"
+  vehicleId        String
+  vehicle          Vehicle    @relation(fields: [vehicleId], references: [vehicleId])
+  tripNumber       Int        // 1 or 2
+  tripDate         DateTime   @db.Date
+  brand            Brand
+  district         String
+  depotId          String     // "Peliyagoda" or "Kandy"
+  totalWeightKg    Float      @default(0)
+  totalVolumeM3    Float      @default(0)
+  totalDurationMin Float      @default(0)
+  fuelConsumedL    Float      @default(0)
+  status           String     @default("planned") // planned, loading, en_route, completed
+  departureTime    DateTime?
+  completedTime    DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  stops            TripStop[]
+
+  @@map("trips")
+}
+
+model TripStop {
+  id             String      @id @default(uuid())
+  tripId         String
+  trip           Trip        @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
+  stopSequence   Int         // 1, 2, 3 ...
+  outletId       String
+  outlet         Outlet      @relation(fields: [outletId], references: [outletId])
+  orderId        String
+  order          Order       @relation(fields: [orderId], references: [orderId])
+  plannedArrival String?
+  actualArrival  DateTime?
+  actualDepart   DateTime?
+  status         StopStatus  @default(pending)
+  podRecords     PodRecord[]
+
+  @@map("trip_stops")
+}
+
+model PodRecord {
+  id             String    @id @default(uuid())
+  idempotencyKey String    @unique // UUIDv4
+  stopId         String
+  stop           TripStop  @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [orderId])
+  signatureData  String?   @db.Text
+  photoPath      String?
+  receivedUnits  Int
+  notes          String?
+  isOffline      Boolean   @default(false)
+  clientTimestamp DateTime
+  syncedAt       DateTime  @default(now())
+
+  @@map("pod_records")
+}
+
+model DeferralRecord {
+  id              String   @id @default(uuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  reasonCode      String   // DEF-01, DEF-02 ...
+  reasonNotes     String?
+  deferredDate    DateTime @default(now())
+  rescheduledDate DateTime?
+
+  @@map("deferral_records")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
