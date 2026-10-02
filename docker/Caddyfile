@@ -1,0 +1,24 @@
+:80 {
+    # Centralized Security Headers (OWASP Top 10 Hardened)
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(self), geolocation=(), microphone=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org; connect-src 'self' *.tile.openstreetmap.org ws: wss:; font-src 'self' data:;"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # Route Python Optimization Endpoints Directly
+    handle /api/v1/* {
+        reverse_proxy optimizer:8000
+    }
+
+    # Route All Other Traffic to Next.js Web Application
+    handle {
+        reverse_proxy web:3000
+    }
+
+    # Enable Gzip and Zstandard Compression
+    encode gzip zstd
+}
