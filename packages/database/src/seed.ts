@@ -6,19 +6,19 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.info('🌱 Starting database seed process...');
+  console.info('Starting database seed process...');
 
   const dataDir = path.resolve(__dirname, '../../data');
   const outletsCsvPath = path.join(dataDir, 'outlets.csv');
   const vehiclesCsvPath = path.join(dataDir, 'vehicles.csv');
 
-  // 1. Seed Outlets
+  // Seed Outlets
   if (fs.existsSync(outletsCsvPath)) {
     const outletsContent = fs.readFileSync(outletsCsvPath, 'utf-8');
     const lines = outletsContent.split('\n').filter((l) => l.trim().length > 0);
     const headers = lines[0].split(',').map((h) => h.trim());
 
-    console.info(`📦 Seeding ${lines.length - 1} outlets from ${outletsCsvPath}...`);
+    console.info(`Seeding ${lines.length - 1} outlets from ${outletsCsvPath}...`);
     for (let i = 1; i < lines.length; i++) {
       const parts = lines[i].split(',').map((p) => p.trim());
       if (parts.length < headers.length) continue;
@@ -40,7 +40,7 @@ async function main() {
         update: {},
         create: {
           outletId: outlet_id,
-          name: `Waypoint ${brand} - ${district} (${outlet_id})`,
+          name: `Waypoint ${brand} ${district} (${outlet_id})`,
           brand: brand as Brand,
           district: district,
           depotId: depot,
@@ -54,12 +54,12 @@ async function main() {
     }
   }
 
-  // 2. Seed Vehicles
+  // Seed Vehicles
   if (fs.existsSync(vehiclesCsvPath)) {
     const vehiclesContent = fs.readFileSync(vehiclesCsvPath, 'utf-8');
     const lines = vehiclesContent.split('\n').filter((l) => l.trim().length > 0);
 
-    console.info(`🚚 Seeding ${lines.length - 1} fleet vehicles from ${vehiclesCsvPath}...`);
+    console.info(`Seeding ${lines.length - 1} fleet vehicles from ${vehiclesCsvPath}...`);
     for (let i = 1; i < lines.length; i++) {
       const parts = lines[i].split(',').map((p) => p.trim());
       if (parts.length < 9) continue;
@@ -95,8 +95,8 @@ async function main() {
     }
   }
 
-  // 3. Seed 4 Official Demo User Accounts
-  console.info('👥 Seeding default demo accounts...');
+  // Seed Default Demo Accounts
+  console.info('Seeding default demo accounts...');
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash('REDACTED', salt);
 
@@ -121,12 +121,12 @@ async function main() {
     });
   }
 
-  console.info('✅ Database seed completed successfully!');
+  console.info('Database seed completed successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seed:', e);
+    console.error('Error during seed:', e);
     process.exit(1);
   })
   .finally(async () => {
