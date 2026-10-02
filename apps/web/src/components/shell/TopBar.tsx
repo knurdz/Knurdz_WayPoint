@@ -11,6 +11,7 @@ interface TopBarProps {
   userName?: string;
   depot?: string;
   children?: React.ReactNode;
+  onOpenSearch?: () => void;
 }
 
 export default function TopBar({
@@ -18,6 +19,7 @@ export default function TopBar({
   userName = 'Nimal Perera',
   depot = 'Peliyagoda Hub',
   children,
+  onOpenSearch,
 }: TopBarProps) {
   const router = useRouter();
 
@@ -73,6 +75,32 @@ export default function TopBar({
           <span style={{ color: 'var(--wp-muted, #6E838A)' }}>•</span>
           <span>{depot}</span>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          className="wp-search-trigger"
+          aria-label="Search pages and actions"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '6px 14px',
+            borderRadius: 8,
+            border: '1px solid var(--wp-border, rgba(0,0,0,0.1))',
+            background: 'var(--wp-subpanel, #F8F8F7)',
+            color: 'var(--wp-muted, #6E838A)',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          <span>Search pages, rules, outlets...</span>
+          <kbd className="wp-kbd" style={{ fontSize: 11, padding: '2px 5px', borderRadius: 4, border: '1px solid var(--wp-border)' }}>
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

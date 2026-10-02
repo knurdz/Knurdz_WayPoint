@@ -1,0 +1,138 @@
+export interface KnowledgeItem {
+  id: string;
+  category: "Rule" | "Outlet" | "Vehicle" | "Action" | "Page";
+  title: string;
+  summary: string;
+  details: string;
+  actionUrl?: string;
+  keywords: string[];
+}
+
+export const COPILOT_KNOWLEDGE_BASE: KnowledgeItem[] = [
+  {
+    id: "RULE_01",
+    category: "Rule",
+    title: "Rule 01: Maximum Vehicle Payload Capacity",
+    summary: "Vehicles cannot exceed maximum gross weight limits under any circumstances.",
+    details: "Total parcel weight assigned to any chassis cannot exceed certified payload capacity in kilograms. Hard feasibility rule R01.",
+    actionUrl: "/dispatcher/validator",
+    keywords: ["payload", "capacity", "weight", "kilogram", "r01", "rule 1"],
+  },
+  {
+    id: "RULE_02",
+    category: "Rule",
+    title: "Rule 02: Maximum Volumetric Capacity",
+    summary: "Total parcel volume in cubic meters must fit within cargo compartment.",
+    details: "Volume utilization cannot exceed 100 percent of chassis cubic capacity. Hard feasibility rule R02.",
+    actionUrl: "/dispatcher/validator",
+    keywords: ["volume", "cubic", "capacity", "m3", "r02", "rule 2"],
+  },
+  {
+    id: "RULE_06",
+    category: "Rule",
+    title: "Rule 06: Pre Dawn Departure Budget",
+    summary: "Vehicles departing before dawn must operate within assigned fuel and distance quota.",
+    details: "Maximum 15 percent of total fleet can depart between 03:00 and 05:00 SLST. Hard feasibility rule R06.",
+    actionUrl: "/dispatcher/cutoff",
+    keywords: ["pre dawn", "departure", "budget", "quota", "fuel", "r06"],
+  },
+  {
+    id: "RULE_08",
+    category: "Rule",
+    title: "Rule 08: Mall Delivery Window Constraint",
+    summary: "Shopping complex outlets only accept deliveries during strict security receiving slots.",
+    details: "Deliveries to OUT003 and OUT004 must occur within 10:30 to 12:30 window. Unloading outside this slot is blocked by mall security.",
+    actionUrl: "/dispatcher/exceptions",
+    keywords: ["mall", "window", "slot", "security", "receiving", "r08"],
+  },
+  {
+    id: "RULE_14",
+    category: "Rule",
+    title: "Rule 14: Van Only Narrow Street Restriction",
+    summary: "Certain hilly and narrow terrain outlets cannot be serviced by heavy chassis trucks.",
+    details: "Hill country routes and dense urban corridors require class C vans due to turning radius and bridge load limits.",
+    actionUrl: "/dispatcher/allocation",
+    keywords: ["van only", "narrow", "bridge", "hill country", "r14", "truck"],
+  },
+  {
+    id: "OUT_003",
+    category: "Outlet",
+    title: "Outlet OUT003: Kandy Central Superstore",
+    summary: "High volume hill country hub with mall window and chilled storage constraints.",
+    details: "Location: Dalada Veediya, Kandy. Receiving dock open 06:00 to 18:00 with mall priority window 10:30 to 12:30. Coolroom capacity 42 cubic meters.",
+    actionUrl: "/store/tracking",
+    keywords: ["out003", "kandy", "central", "outlet", "superstore"],
+  },
+  {
+    id: "OUT_001",
+    category: "Outlet",
+    title: "Outlet OUT001: Colombo Fort Express",
+    summary: "Dense urban express outlet with van only delivery requirements.",
+    details: "Location: York Street, Colombo 01. Narrow alleyway dock requiring class C vans. Receiving window 05:00 to 14:00.",
+    actionUrl: "/store/order",
+    keywords: ["out001", "colombo", "fort", "york street", "express"],
+  },
+  {
+    id: "VEH_037",
+    category: "Vehicle",
+    title: "Vehicle VEH037: Isuzu Dual Chamber Reefer",
+    summary: "Refrigerated medium chassis equipped with frozen and chilled compartments.",
+    details: "Payload 3200 kg, volume 14.5 m3. Frozen setpoint negative 18 C, chilled setpoint positive 4 C. Dedicated to hill country corridor routes.",
+    actionUrl: "/driver/route",
+    keywords: ["veh037", "isuzu", "reefer", "frozen", "chilled", "vehicle", "truck"],
+  },
+  {
+    id: "PAGE_DISP_MC",
+    category: "Page",
+    title: "Mission Control Dashboard",
+    summary: "Real time fleet metrics, active runs, cold chain telemetry, and alerts.",
+    details: "Navigate to central dispatcher mission control.",
+    actionUrl: "/dispatcher",
+    keywords: ["dispatcher", "mission control", "dashboard", "kpi"],
+  },
+  {
+    id: "PAGE_DISP_ALLOC",
+    category: "Page",
+    title: "Chassis Allocation Board",
+    summary: "Drag and drop order assignment and chassis capacity balancing board.",
+    details: "Interactive allocation board for vehicle runs.",
+    actionUrl: "/dispatcher/allocation",
+    keywords: ["allocation", "chassis", "drag", "drop", "runs"],
+  },
+  {
+    id: "PAGE_DISP_CUTOFF",
+    category: "Page",
+    title: "Cutoff and Rollover Lock",
+    summary: "16:00 SLST order intake freeze and next day rollover engine.",
+    details: "Manage system order cutoff and rollover rules.",
+    actionUrl: "/dispatcher/cutoff",
+    keywords: ["cutoff", "rollover", "lock", "mutex", "16:00"],
+  },
+  {
+    id: "PAGE_LOAD_DOCK",
+    category: "Page",
+    title: "Warehouse Dock Scan Terminal",
+    summary: "Barcode verification and reverse loading sequence checklist.",
+    details: "Loader scan engine and bay assignments.",
+    actionUrl: "/loader",
+    keywords: ["loader", "dock", "scan", "barcode", "warehouse"],
+  },
+  {
+    id: "PAGE_DRV_ROUTE",
+    category: "Page",
+    title: "Driver In Cab Route Sheet",
+    summary: "Turn by turn corridor run sheet, customer signatures, and offline store.",
+    details: "Driver route manifest and stop execution.",
+    actionUrl: "/driver/route",
+    keywords: ["driver", "route", "manifest", "cab", "sheet"],
+  },
+  {
+    id: "PAGE_STORE_ORDER",
+    category: "Page",
+    title: "Store Order Intake Portal",
+    summary: "Direct draft placement with ambient and chilled product catalogues.",
+    details: "Store manager draft intake and voucher generation.",
+    actionUrl: "/store/order",
+    keywords: ["store", "order", "intake", "draft", "catalogue"],
+  },
+];
