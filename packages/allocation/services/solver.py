@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Tuple
 from rules import evaluate_trip, compute_trip_duration, TRIP_BUDGET_PREDAWN_MIN, TRIP_BUDGET_DAYTIME_MIN
 from .priority import sort_orders_by_priority
 from .data_loader import load_vehicles_catalog, load_district_travel, load_service_allowances
+from .deferral import diagnose_deferral_reason
 
 FLEET_CATALOG = load_vehicles_catalog()
 DISTRICT_TRAVEL = load_district_travel()
@@ -143,11 +144,13 @@ def run_greedy_allocation(
     for order in sorted_orders:
         oid = order.get("order_id", "")
         if oid not in allocated_order_ids:
+            diagnosis = diagnose_deferral_reason(order, available_vehicles)
             deferred_orders_output.append({
                 "order_id": oid,
                 "outlet_id": order.get("outlet_id", ""),
-                "reason_code": "DEF_01",
-                "reason_description": "Fleet capacity exhausted for designated district and time window"
+                "reason_code": diagnosis.reason_code,
+                "reason_description": diagnosis.reason_description,
+                "mitigation_action": diagnosis.mitigation_action
             })
 
     return {
