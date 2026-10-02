@@ -26,10 +26,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="light">
-      <body>
-        <main className="min-h-screen">
-          {children}
-        </main>
+      <head>
+        <link rel="stylesheet" href="/assets/site.css" />
+      </head>
+      <body className="wp-site">
+        {children}
       </body>
     </html>
   );
