@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
+import CutoffTicker from './CutoffTicker';
 import { LogOut, User } from 'lucide-react';
 
 interface TopBarProps {
@@ -75,6 +76,7 @@ export default function TopBar({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <CutoffTicker />
         {children}
 
         <ThemeToggle />
