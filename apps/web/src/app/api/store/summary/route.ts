@@ -1,0 +1,78 @@
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const storeData = {
+    outletCode: "OUT001",
+    outletName: "OUT001 Fresh Galle Rd",
+    location: "Colombo 03 · van only curb · next window 05:00 to 07:30",
+    status: "Outlet Online",
+    kpis: {
+      coolroomPct: 74,
+      coolroomWeightKg: 1820,
+      coolroomMaxKg: 2500,
+      nextVanMinutes: 14,
+      nextVanVehicle: "VEH037",
+      nextVanDistanceKm: 3.8,
+      dockStatus: "Clear",
+      dockLimit: "Van only · 3.2 m",
+      todayOpen: 2,
+      awaitingReceipt: 1,
+    },
+    deliveries: [
+      {
+        id: "del_1",
+        code: "DEL_88401",
+        cargoType: "Chilled",
+        goods: "Dairy cases, curd, ice cream",
+        weightKg: 4850,
+        status: "In Transit",
+        statusBadge: "In Transit · 14m",
+        eta: "06:18 SLST",
+        actionLabel: "ETA 06:18 · Track",
+        link: "/store/tracking",
+        canConfirm: false,
+      },
+      {
+        id: "del_2",
+        code: "DEL_88390",
+        cargoType: "Ambient",
+        goods: "Bread loaves, organic rice",
+        weightKg: 2100,
+        status: "Delivered",
+        statusBadge: "Delivered",
+        eta: "05:40 SLST",
+        actionLabel: "Full receipt →",
+        link: "/store/receipt",
+        canConfirm: true,
+      },
+      {
+        id: "del_3",
+        code: "DEL_88210",
+        cargoType: "Chilled",
+        goods: "Dairy selection x 150 cases",
+        weightKg: 5200,
+        status: "Verified",
+        statusBadge: "Verified",
+        eta: "Yesterday",
+        actionLabel: "Receipt signed",
+        link: "/store/receipt",
+        canConfirm: false,
+      },
+      {
+        id: "del_4",
+        code: "DEL_88155",
+        cargoType: "Chilled",
+        goods: "Yogurt and butter totes",
+        weightKg: 3800,
+        status: "Deferred",
+        statusBadge: "Deferred",
+        eta: "Next run",
+        actionLabel: "REEFER_CAPACITY",
+        link: "/store/deferral",
+        canConfirm: false,
+      },
+    ],
+  };
+
+  return NextResponse.json(storeData);
+}
