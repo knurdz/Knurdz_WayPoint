@@ -3,6 +3,8 @@
 import React from 'react';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
+import CopilotModal from '../copilot/CopilotModal';
+import { useCopilot } from '../../hooks/useCopilot';
 
 interface AppShellProps {
   role?: 'dispatcher' | 'loader' | 'driver' | 'store';
@@ -17,9 +19,11 @@ export default function AppShell({
   depot = 'Peliyagoda Hub',
   children,
 }: AppShellProps) {
+  const { isOpen, openCopilot, closeCopilot } = useCopilot();
+
   return (
     <div className="wp-app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar role={role} userName={userName} depot={depot} />
+      <TopBar role={role} userName={userName} depot={depot} onOpenSearch={openCopilot} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar role={role} />
         <main style={{
@@ -31,6 +35,7 @@ export default function AppShell({
           {children}
         </main>
       </div>
+      <CopilotModal isOpen={isOpen} onClose={closeCopilot} />
     </div>
   );
 }
