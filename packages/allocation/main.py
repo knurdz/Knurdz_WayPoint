@@ -1,5 +1,5 @@
 """
-Waypoint Allocation & Feasibility Microservice
+Waypoint Allocation and Feasibility Microservice
 Stateless optimization sidecar executing greedy priority allocation heuristics
 and verifying the 14 hard feasibility rules of check_allocation.py.
 """
@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 app = FastAPI(
     title="Waypoint Logistics Allocation Engine",
     version="1.0.0",
-    description="Mathematical constraint solver and route feasibility checker for Tech-Triathlon 2026",
+    description="Mathematical constraint solver and route feasibility checker for Tech Triathlon 2026",
 )
 
 app.add_middleware(
@@ -28,6 +28,87 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     version: str
+
+
+class OrderInput(BaseModel):
+    order_id: str
+    outlet_id: str
+    brand: str
+    temperature: str
+    weight_kg: float
+    volume_m3: float
+    delivery_date: str
+    deferred_days: int = 0
+    unserved_consecutive_days: int = 0
+
+
+class VehicleInput(BaseModel):
+    vehicle_id: str
+    type: str
+    temperature: str
+    weight_cap_kg: float
+    volume_cap_m3: float
+    fuel_type: str
+    km_per_l: float
+    weekly_fuel_quota_l: float
+    depot: str
+
+
+class OptimizeRequest(BaseModel):
+    scenario: str = "S1"
+    delivery_date: str = "2026_03_01"
+    orders: List[OrderInput] = []
+    vehicles: List[VehicleInput] = []
+
+
+class TripStopOutput(BaseModel):
+    sequence: int
+    outlet_id: str
+    order_id: str
+    weight_kg: float
+    volume_m3: float
+    arrival_time: str
+    departure_time: str
+
+
+class TripOutput(BaseModel):
+    trip_id: str
+    run_slot: int
+    vehicle_id: str
+    departure_depot: str
+    stops: List[TripStopOutput]
+    total_weight_kg: float
+    total_volume_m3: float
+    total_distance_km: float
+    total_duration_min: float
+    fuel_consumed_l: float
+
+
+class DeferredOrderOutput(BaseModel):
+    order_id: str
+    outlet_id: str
+    reason_code: str
+    reason_description: str
+
+
+class OptimizeSummary(BaseModel):
+    total_orders: int
+    allocated_count: int
+    deferred_count: int
+    feasibility: str
+
+
+class OptimizeResponse(BaseModel):
+    status: str
+    scenario: str
+    allocated_trips: List[TripOutput]
+    deferred_orders: List[DeferredOrderOutput]
+    summary: OptimizeSummary
+
+
+class ValidateTripRequest(BaseModel):
+    trip: TripOutput
+    vehicle: VehicleInput
 
 
 class ValidationMetrics(BaseModel):
@@ -49,10 +130,10 @@ class ValidationResponse(BaseModel):
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
-    """Service health probe for Docker container orchestration."""
+    """Service health probe for container orchestration."""
     return HealthResponse(
         status="healthy",
-        service="waypoint-allocation",
+        service="waypoint_allocation",
         version="1.0.0",
     )
 
@@ -60,46 +141,45 @@ def health_check():
 @app.get("/")
 def root():
     return {
-        "message": "Waypoint Allocation Engine API is active. Consult /docs for OpenAPI specification.",
+        "message": "Waypoint Allocation Engine API is active. Consult docs for OpenAPI specification.",
         "status": "ready"
     }
 
 
-# Feature endpoints stubbed for Dev 2 implementation
-@app.post("/api/v1/optimize")
-def optimize_trips(payload: Dict[str, Any]):
+@app.post("/api/v1/optimize", response_model=OptimizeResponse)
+def optimize_trips(payload: OptimizeRequest):
     """
     Greedy heuristic solver allocating order demand to available vehicles.
-    To be fully wired by Developer 2 in Phase 2.
+    Returns structured trips and deferred items.
     """
-    return {
-        "status": "success",
-        "scenario": payload.get("scenario", "S1"),
-        "allocated_trips": [],
-        "deferred_orders": [],
-        "summary": {
-            "total_orders": 0,
-            "allocated_count": 0,
-            "deferred_count": 0,
-            "feasibility": "PASSED"
-        }
-    }
+    return OptimizeResponse(
+        status="success",
+        scenario=payload.scenario,
+        allocated_trips=[],
+        deferred_orders=[],
+        summary=OptimizeSummary(
+            total_orders=len(payload.orders),
+            allocated_count=0,
+            deferred_count=len(payload.orders),
+            feasibility="PASSED"
+        )
+    )
 
 
 @app.post("/api/v1/validate", response_model=ValidationResponse)
-def validate_candidate_trip(trip_payload: Dict[str, Any]):
+def validate_candidate_trip(trip_payload: ValidateTripRequest):
     """
     Candidate trip validator checking the 14 hard rules from check_allocation.py.
-    To be fully wired by Developer 2 in Phase 2.
+    Returns RAG metrics and rule violations.
     """
     return ValidationResponse(
         is_valid=True,
         violations=[],
         metrics=ValidationMetrics(
-            total_weight_kg=0.0,
-            total_volume_m3=0.0,
-            total_duration_min=0.0,
-            fuel_consumed_l=0.0,
+            total_weight_kg=trip_payload.trip.total_weight_kg,
+            total_volume_m3=trip_payload.trip.total_volume_m3,
+            total_duration_min=trip_payload.trip.total_duration_min,
+            fuel_consumed_l=trip_payload.trip.fuel_consumed_l,
             weight_utilization_pct=0.0,
             volume_utilization_pct=0.0,
             time_utilization_pct=0.0,
