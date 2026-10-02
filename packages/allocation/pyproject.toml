@@ -1,0 +1,20 @@
+[project]
+name = "waypoint-allocation"
+version = "1.0.0"
+description = "Mathematical Heuristic Allocation Engine and Feasibility Validator"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "pulp>=2.8.0",
+    "python-multipart>=0.0.18",
+    "httpx>=0.28.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
