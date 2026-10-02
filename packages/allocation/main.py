@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from services.validator import validate_route_payload
+from services.solver import run_greedy_allocation
 
 app = FastAPI(
     title="Waypoint Logistics Allocation Engine",
@@ -34,25 +35,29 @@ class HealthResponse(BaseModel):
 class OrderInput(BaseModel):
     order_id: str
     outlet_id: str
-    brand: str
-    temperature: str
-    weight_kg: float
-    volume_m3: float
-    delivery_date: str
+    brand: str = "Fresh"
+    district: str = "Colombo"
+    depot: str = "Peliyagoda"
+    temperature: str = "ambient"
+    weight_kg: float = 100.0
+    volume_m3: float = 0.5
+    delivery_date: str = "2026_03_01"
+    parking_constraint: str = "normal"
+    dock_type: str = "street"
     deferred_days: int = 0
     unserved_consecutive_days: int = 0
 
 
 class VehicleInput(BaseModel):
     vehicle_id: str
-    type: str
-    temperature: str
-    weight_cap_kg: float
-    volume_cap_m3: float
-    fuel_type: str
-    km_per_l: float
-    weekly_fuel_quota_l: float
-    depot: str
+    type: str = "truck"
+    temperature: str = "ambient"
+    weight_cap_kg: float = 5000.0
+    volume_cap_m3: float = 20.0
+    fuel_type: str = "diesel"
+    km_per_l: float = 4.5
+    weekly_fuel_quota_l: float = 300.0
+    depot: str = "Peliyagoda"
 
 
 class OptimizeRequest(BaseModel):
@@ -169,18 +174,10 @@ def optimize_trips(payload: OptimizeRequest):
     Greedy heuristic solver allocating order demand to available vehicles.
     Returns structured trips and deferred items.
     """
-    return OptimizeResponse(
-        status="success",
-        scenario=payload.scenario,
-        allocated_trips=[],
-        deferred_orders=[],
-        summary=OptimizeSummary(
-            total_orders=len(payload.orders),
-            allocated_count=0,
-            deferred_count=len(payload.orders),
-            feasibility="PASSED"
-        )
-    )
+    orders_data = [o.model_dump() for o in payload.orders]
+    vehicles_data = [v.model_dump() for v in payload.vehicles]
+    result = run_greedy_allocation(orders_data, vehicles_data, payload.scenario)
+    return OptimizeResponse(**result)
 
 
 @app.post("/api/v1/validate", response_model=ValidationResponse)
