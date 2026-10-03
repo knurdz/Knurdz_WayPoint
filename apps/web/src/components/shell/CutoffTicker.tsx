@@ -5,7 +5,33 @@ import { useCutoffCountdown } from '@/hooks/useCutoffCountdown';
 import { Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export default function CutoffTicker() {
-  const { formatted, isPastCutoff, urgency } = useCutoffCountdown();
+  const { formatted, isPastCutoff, urgency, mounted } = useCutoffCountdown();
+
+  if (!mounted) {
+    return (
+      <div
+        title="16:00:00 SLST Daily Order Cutoff Freeze"
+        suppressHydrationWarning
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '5px 12px',
+          borderRadius: 8,
+          background: 'var(--wp-subpanel, #F8F8F7)',
+          border: '1px solid var(--wp-border, rgba(0,0,0,0.08))',
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--wp-muted, #6E838A)',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '0.02em',
+        }}
+      >
+        <Clock size={15} color="var(--wp-muted, #6E838A)" />
+        <span suppressHydrationWarning>16:00 SLST Cutoff</span>
+      </div>
+    );
+  }
 
   let bg = 'var(--wp-subpanel, #F8F8F7)';
   let border = 'var(--wp-border, rgba(0,0,0,0.08))';
@@ -32,6 +58,7 @@ export default function CutoffTicker() {
   return (
     <div
       title="16:00:00 SLST Daily Order Cutoff Freeze"
+      suppressHydrationWarning
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -55,7 +82,7 @@ export default function CutoffTicker() {
         <Clock size={15} color={iconColor} />
       )}
 
-      <span>
+      <span suppressHydrationWarning>
         {isPastCutoff ? (
           'Orders Frozen (Past 16:00)'
         ) : (
