@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signAuthToken, setAuthCookie, AuthPayload } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rate_limiter';
 
 const DEMO_ACCOUNTS: Record<string, { name: string; role: 'dispatcher' | 'loader' | 'driver' | 'store'; outletId?: string }> = {
   'dispatcher@waypoint.test': { name: 'Nimal Perera', role: 'dispatcher' },
@@ -11,6 +12,21 @@ const DEMO_ACCOUNTS: Record<string, { name: string; role: 'dispatcher' | 'loader
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || '127.0.0.1';
+    const limit = checkRateLimit(`login_${ip}`, 5, 60);
+
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please retry later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(limit.resetInSeconds),
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const { email, password, remember = true } = body;
 
