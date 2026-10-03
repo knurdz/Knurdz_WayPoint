@@ -93,9 +93,26 @@ def run_greedy_allocation(
 
                 docks = [o.get("dock_type", "street") for o in test_orders]
                 dur = compute_trip_duration(district, brand, docks, DISTRICT_TRAVEL, SERVICE_ALLOWANCES)
-                max_dur = TRIP_BUDGET_PREDAWN_MIN if brand == "Fresh" else TRIP_BUDGET_DAYTIME_MIN
 
-                if dur > max_dur + 0.000001:
+                # Calculate cumulative time budget across vehicle daily trips
+                other_window_dur = 0.0
+                for other_slot in range(MAX_RUN_SLOTS_PER_VEHICLE):
+                    if other_slot == slot_idx:
+                        continue
+                    other_slot_orders = vehicle_trips[vid][other_slot]
+                    if not other_slot_orders:
+                        continue
+                    o_brand = other_slot_orders[0].get("brand", "Fresh")
+                    is_same_window = (brand == "Fresh" and o_brand == "Fresh") or (brand != "Fresh" and o_brand != "Fresh")
+                    if is_same_window:
+                        o_district = other_slot_orders[0].get("district", "Colombo")
+                        o_docks = [o.get("dock_type", "street") for o in other_slot_orders]
+                        other_window_dur += compute_trip_duration(o_district, o_brand, o_docks, DISTRICT_TRAVEL, SERVICE_ALLOWANCES)
+
+                cumulative_window_dur = dur + other_window_dur
+                max_budget = TRIP_BUDGET_PREDAWN_MIN if brand == "Fresh" else TRIP_BUDGET_DAYTIME_MIN
+
+                if cumulative_window_dur > max_budget + 0.000001:
                     continue
 
                 vehicle_trips[vid][slot_idx].append(order)

@@ -15,7 +15,7 @@ def test_deferral_reefer_shortfall():
         {"vehicle_id": "VEH001", "type": "truck", "temp": "ambient", "depot": "Peliyagoda"}
     ]
     diag = diagnose_deferral_reason(order, available_vehicles)
-    assert diag.reason_code == "DEF_02"
+    assert diag.reason_code == "REEFER_CAPACITY"
     assert "reefer" in diag.reason_description.lower()
 
 def test_deferral_van_only_restriction():
@@ -32,11 +32,11 @@ def test_deferral_van_only_restriction():
         {"vehicle_id": "VEH001", "type": "truck", "temp": "ambient", "depot": "Peliyagoda"}
     ]
     diag = diagnose_deferral_reason(order, available_vehicles)
-    assert diag.reason_code == "DEF_03"
+    assert diag.reason_code == "VAN_ONLY"
     assert "van" in diag.reason_description.lower()
 
 def test_deferral_late_cutoff_rollover():
     order = {"order_id": "ORD003"}
     diag = diagnose_deferral_reason(order, [], is_late_order=True)
-    assert diag.reason_code == "DEF_06"
+    assert diag.reason_code == "CUTOFF_ROLLOVER"
     assert "16:00" in diag.reason_description
