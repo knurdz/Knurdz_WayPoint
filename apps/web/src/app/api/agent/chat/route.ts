@@ -1,8 +1,21 @@
 import { NextResponse } from 'next/server';
 import { COPILOT_KNOWLEDGE_BASE } from '@/lib/copilot_kb';
+import { checkRateLimit } from '@/lib/rate_limiter';
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const limit = checkRateLimit(`chat_${ip}`, 30, 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many queries submitted. Please wait before submitting more questions.',
+          code: 'RATE_LIMIT_EXCEEDED',
+        },
+        { status: 429, headers: { 'Retry-After': String(limit.resetInSeconds) } }
+      );
+    }
+
     const body = await req.json();
     const query = (body.query || '').trim().toLowerCase();
 
