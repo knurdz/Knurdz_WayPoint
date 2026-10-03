@@ -4,16 +4,17 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# 1. Dependencies Stage
+# Dependencies Stage
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/config/package.json ./packages/config/
 COPY packages/database/package.json ./packages/database/
+COPY packages/types/package.json ./packages/types/
 RUN pnpm install --frozen-lockfile || pnpm install
 
-# 2. Builder Stage
+# Builder Stage
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -22,13 +23,13 @@ COPY --from=deps /app/packages/database/node_modules ./packages/database/node_mo
 COPY . .
 
 # Generate Prisma Client
-RUN pnpm --filter @waypoint/database run db:generate || true
+RUN pnpm --filter @waypoint/database run db:generate
 
 # Build Next.js Web App
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm --filter @waypoint/web run build || true
+RUN pnpm --filter @waypoint/web run build
 
-# 3. Runner Stage
+# Runner Stage
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production

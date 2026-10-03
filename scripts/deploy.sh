@@ -13,7 +13,7 @@ echo "Step 2: Building container images"
 docker compose build --no-cache
 
 echo "Step 3: Starting database and cache services"
-docker compose up -d db redis
+docker compose up -d postgres redis
 sleep 5
 
 echo "Step 4: Applying database schema migrations"
