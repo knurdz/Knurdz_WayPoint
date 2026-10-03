@@ -4,12 +4,21 @@ Stateless optimization sidecar executing greedy priority allocation heuristics
 and verifying the 14 hard feasibility rules of check_allocation.py.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from services.validator import validate_route_payload
 from services.solver import run_greedy_allocation
+from logger import log
+from config import (
+    DEFAULT_DEPOT,
+    DEFAULT_VEHICLE_WEIGHT_CAP_KG,
+    DEFAULT_VEHICLE_VOLUME_CAP_M3,
+    DEFAULT_KM_PER_L,
+    DEFAULT_WEEKLY_FUEL_QUOTA_L,
+)
 
 app = FastAPI(
     title="Waypoint Logistics Allocation Engine",
@@ -25,6 +34,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Enterprise global exception handler preventing unhandled stack trace leaks.
+    """
+    log.error(f"Unhandled error processing {request.method} {request.url.path}: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "message": "Internal logistics optimization engine error occurred",
+            "detail": str(exc),
+        },
+    )
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -37,7 +61,7 @@ class OrderInput(BaseModel):
     outlet_id: str
     brand: str = "Fresh"
     district: str = "Colombo"
-    depot: str = "Peliyagoda"
+    depot: str = DEFAULT_DEPOT
     temperature: str = "ambient"
     weight_kg: float = 100.0
     volume_m3: float = 0.5
@@ -52,12 +76,12 @@ class VehicleInput(BaseModel):
     vehicle_id: str
     type: str = "truck"
     temperature: str = "ambient"
-    weight_cap_kg: float = 5000.0
-    volume_cap_m3: float = 20.0
+    weight_cap_kg: float = DEFAULT_VEHICLE_WEIGHT_CAP_KG
+    volume_cap_m3: float = DEFAULT_VEHICLE_VOLUME_CAP_M3
     fuel_type: str = "diesel"
-    km_per_l: float = 4.5
-    weekly_fuel_quota_l: float = 300.0
-    depot: str = "Peliyagoda"
+    km_per_l: float = DEFAULT_KM_PER_L
+    weekly_fuel_quota_l: float = DEFAULT_WEEKLY_FUEL_QUOTA_L
+    depot: str = DEFAULT_DEPOT
 
 
 class OptimizeRequest(BaseModel):
@@ -95,6 +119,7 @@ class DeferredOrderOutput(BaseModel):
     outlet_id: str
     reason_code: str
     reason_description: str
+    mitigation_action: Optional[str] = None
 
 
 class OptimizeSummary(BaseModel):
@@ -117,7 +142,7 @@ class CandidateOrderPayload(BaseModel):
     outlet_id: str = "OUT001"
     brand: str = "Fresh"
     district: str = "Colombo"
-    depot: str = "Peliyagoda"
+    depot: str = DEFAULT_DEPOT
     temp_requirement: str = "ambient"
     parking_constraint: str = "normal"
     dock_type: str = "street"
@@ -152,7 +177,9 @@ class ValidationResponse(BaseModel):
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
-    """Service health probe for container orchestration."""
+    """
+    Service health probe for container orchestration and load balancers.
+    """
     return HealthResponse(
         status="healthy",
         service="waypoint_allocation",
@@ -162,6 +189,9 @@ def health_check():
 
 @app.get("/")
 def root():
+    """
+    Root status endpoint displaying API readiness.
+    """
     return {
         "message": "Waypoint Allocation Engine API is active. Consult docs for OpenAPI specification.",
         "status": "ready"
@@ -172,8 +202,9 @@ def root():
 def optimize_trips(payload: OptimizeRequest):
     """
     Greedy heuristic solver allocating order demand to available vehicles.
-    Returns structured trips and deferred items.
+    Returns structured trips and diagnosed deferred items.
     """
+    log.info(f"Received optimization request: scenario={payload.scenario}, orders={len(payload.orders)}")
     orders_data = [o.model_dump() for o in payload.orders]
     vehicles_data = [v.model_dump() for v in payload.vehicles]
     result = run_greedy_allocation(orders_data, vehicles_data, payload.scenario)
@@ -184,8 +215,9 @@ def optimize_trips(payload: OptimizeRequest):
 def validate_candidate_trip(payload: ValidateTripPayload):
     """
     Candidate trip validator checking the 14 hard rules from check_allocation.py.
-    Returns RAG metrics and rule violations.
+    Returns RAG utilization metrics and itemized rule violations.
     """
+    log.info(f"Validating trip candidate: vehicle={payload.vehicle_id}, orders={len(payload.orders)}")
     trip_data = {
         "trip_id": payload.trip_id,
         "vehicle_id": payload.vehicle_id,

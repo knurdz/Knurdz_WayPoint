@@ -22,6 +22,9 @@ def evaluate_trip(
     district_travel_map: Optional[Dict[str, Dict[str, float]]] = None,
     service_allowance_map: Optional[Dict[Tuple[str, str], float]] = None,
 ) -> TripEvaluation:
+    """
+    Evaluates candidate trip against all 14 hard feasibility rules and calculates RAG utilization metrics.
+    """
     fleet_catalog = fleet_catalog or {}
     fleet_status = fleet_status or {}
     district_travel_map = district_travel_map or {}

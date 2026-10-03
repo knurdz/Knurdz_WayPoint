@@ -1,5 +1,23 @@
-from typing import List, Dict, Any, Tuple
-from rules import evaluate_trip, compute_trip_duration, TRIP_BUDGET_PREDAWN_MIN, TRIP_BUDGET_DAYTIME_MIN
+"""
+Waypoint Allocation Engine Solver Service
+Executes greedy priority allocation heuristics under hard feasibility constraints.
+"""
+
+from typing import List, Dict, Any, Set
+from rules import compute_trip_duration
+from rules.types import OrderPayload, VehiclePayload
+from config import (
+    DEFAULT_DEPOT,
+    DEFAULT_VEHICLE_WEIGHT_CAP_KG,
+    DEFAULT_VEHICLE_VOLUME_CAP_M3,
+    DEFAULT_KM_PER_L,
+    MAX_RUN_SLOTS_PER_VEHICLE,
+    TRIP_BUDGET_PREDAWN_MIN,
+    TRIP_BUDGET_DAYTIME_MIN,
+    FALLBACK_DEPOT_TO_DISTRICT_KM,
+    FALLBACK_INTER_STOP_KM,
+)
+from logger import log
 from .priority import sort_orders_by_priority
 from .data_loader import load_vehicles_catalog, load_district_travel, load_service_allowances
 from .deferral import diagnose_deferral_reason
@@ -13,48 +31,50 @@ def run_greedy_allocation(
     available_vehicles: List[Dict[str, Any]],
     scenario: str = "S1"
 ) -> Dict[str, Any]:
+    """
+    Allocates high priority orders across available vehicle fleet slots.
+    Enforces purity, capacity, cold chain, access constraints, and time budgets.
+    """
     if not available_vehicles:
         available_vehicles = list(FLEET_CATALOG.values())
 
+    log.info(f"Initiating greedy allocation for scenario {scenario} with {len(orders)} orders and {len(available_vehicles)} vehicles")
     sorted_orders = sort_orders_by_priority(orders)
 
-    # Track allocations per vehicle: vid -> list of trips [trip1_orders, trip2_orders]
+    # Track allocations per vehicle slot: vid maps to slot order lists
     vehicle_trips: Dict[str, List[List[Dict[str, Any]]]] = {
-        v["vehicle_id"]: [[], []] for v in available_vehicles
+        v["vehicle_id"]: [[] for _ in range(MAX_RUN_SLOTS_PER_VEHICLE)] for v in available_vehicles
     }
 
     allocated_trips_output: List[Dict[str, Any]] = []
-    allocated_order_ids = set()
+    allocated_order_ids: Set[str] = set()
 
     for order in sorted_orders:
         oid = order.get("order_id", "")
         brand = order.get("brand", "Fresh")
         district = order.get("district", "Colombo")
-        depot = order.get("depot", "Peliyagoda")
+        depot = order.get("depot", DEFAULT_DEPOT)
         temp = order.get("temp_requirement", order.get("temperature", "ambient"))
         parking = order.get("parking_constraint", "normal")
-        weight = float(order.get("weight_kg", 0.0))
-        volume = float(order.get("volume_m3", 0.0))
 
         assigned = False
 
         for veh in available_vehicles:
             vid = veh["vehicle_id"]
-            vdepot = veh.get("depot", "Peliyagoda")
-            vtemp = veh.get("temp", "ambient")
+            vdepot = veh.get("depot", DEFAULT_DEPOT)
+            vtemp = veh.get("temp") or veh.get("temperature") or "ambient"
             vtype = veh.get("type", "truck")
-            w_cap = float(veh.get("weight_cap_kg", 5000.0))
-            v_cap = float(veh.get("volume_cap_m3", 20.0))
+            w_cap = float(veh.get("weight_cap_kg", DEFAULT_VEHICLE_WEIGHT_CAP_KG))
+            v_cap = float(veh.get("volume_cap_m3", DEFAULT_VEHICLE_VOLUME_CAP_M3))
 
             if vdepot != depot:
                 continue
-            if temp == "chilled" and vtemp != "reefer":
+            if temp in ["chilled", "frozen"] and vtemp != "reefer":
                 continue
             if parking == "van_only" and vtype != "van":
                 continue
 
-            for slot_idx in range(2):
-                trip_id = slot_idx + 1
+            for slot_idx in range(MAX_RUN_SLOTS_PER_VEHICLE):
                 current_orders = vehicle_trips[vid][slot_idx]
 
                 if current_orders:
@@ -78,7 +98,6 @@ def run_greedy_allocation(
                 if dur > max_dur + 0.000001:
                     continue
 
-                # Feasible! Assign to this slot
                 vehicle_trips[vid][slot_idx].append(order)
                 allocated_order_ids.add(oid)
                 assigned = True
@@ -91,10 +110,10 @@ def run_greedy_allocation(
     trip_counter = 1
     for veh in available_vehicles:
         vid = veh["vehicle_id"]
-        vdepot = veh.get("depot", "Peliyagoda")
-        km_per_l = float(veh.get("km_per_l", 4.5))
+        vdepot = veh.get("depot", DEFAULT_DEPOT)
+        km_per_l = float(veh.get("km_per_l", DEFAULT_KM_PER_L))
 
-        for slot_idx in range(2):
+        for slot_idx in range(MAX_RUN_SLOTS_PER_VEHICLE):
             trip_orders = vehicle_trips[vid][slot_idx]
             if not trip_orders:
                 continue
@@ -108,9 +127,14 @@ def run_greedy_allocation(
             tot_w = sum(float(o.get("weight_kg", 0.0)) for o in trip_orders)
             tot_v = sum(float(o.get("volume_m3", 0.0)) for o in trip_orders)
 
-            travel_info = DISTRICT_TRAVEL.get(primary_district, {"depot_to_district_km": 20.0, "inter_stop_km": 5.0})
+            travel_info = DISTRICT_TRAVEL.get(primary_district, {
+                "depot_to_district_km": FALLBACK_DEPOT_TO_DISTRICT_KM,
+                "inter_stop_km": FALLBACK_INTER_STOP_KM
+            })
             n_stops = len(trip_orders)
-            tot_km = (travel_info.get("depot_to_district_km", 20.0) * 2.0) + (max(0, n_stops - 1) * travel_info.get("inter_stop_km", 5.0))
+            depot_dist = travel_info.get("depot_to_district_km", FALLBACK_DEPOT_TO_DISTRICT_KM)
+            stop_dist = travel_info.get("inter_stop_km", FALLBACK_INTER_STOP_KM)
+            tot_km = (depot_dist * 2.0) + (max(0, n_stops - 1) * stop_dist)
             fuel_l = round(tot_km / km_per_l, 2) if km_per_l > 0 else 0.0
 
             stops_output = []
@@ -139,7 +163,7 @@ def run_greedy_allocation(
             })
             trip_counter += 1
 
-    # Deferred orders
+    # Deferred orders diagnosis
     deferred_orders_output = []
     for order in sorted_orders:
         oid = order.get("order_id", "")
@@ -152,6 +176,8 @@ def run_greedy_allocation(
                 "reason_description": diagnosis.reason_description,
                 "mitigation_action": diagnosis.mitigation_action
             })
+
+    log.info(f"Allocation complete: {len(allocated_order_ids)} orders allocated across {len(allocated_trips_output)} trips, {len(deferred_orders_output)} deferred")
 
     return {
         "status": "success",
