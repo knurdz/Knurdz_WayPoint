@@ -106,3 +106,11 @@ def test_validate_candidate_trip_endpoint():
     data = response.json()
     assert data["is_valid"] is True
     assert data["metrics"]["rag_status"] in ["GREEN", "AMBER", "RED"]
+
+def test_validate_candidate_trip_endpoint_malformed_payload():
+    """
+    Verifies validate endpoint rejects malformed payload with 422 Unprocessable Entity.
+    """
+    bad_payload = {"orders": "not_a_list"}
+    response = client.post("/api/v1/validate", json=bad_payload)
+    assert response.status_code == 422

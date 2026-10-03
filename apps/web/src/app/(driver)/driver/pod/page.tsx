@@ -12,6 +12,7 @@ export default function DriverPodPage() {
   const [photoCaptured, setPhotoCaptured] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [podSuccess, setPodSuccess] = useState<string | null>(null);
+  const [podError, setPodError] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -71,6 +72,7 @@ export default function DriverPodPage() {
     e.preventDefault();
     setSubmitting(true);
     setPodSuccess(null);
+    setPodError(null);
 
     try {
       const res = await fetch("/api/driver/pod", {
@@ -85,12 +87,14 @@ export default function DriverPodPage() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json();
+      if (res.ok && data.success) {
         setPodSuccess(`Proof of delivery ${data.podId} recorded successfully. Stop 2 marked Delivered.`);
+      } else {
+        setPodError(data.error || "Failed to record proof of delivery");
       }
-    } catch (err) {
-      console.error("POD error", err);
+    } catch {
+      setPodError("Network error while submitting proof of delivery");
     } finally {
       setSubmitting(false);
     }
@@ -121,6 +125,21 @@ export default function DriverPodPage() {
           }}
         >
           ✓ {podSuccess}
+        </div>
+      )}
+
+      {podError && (
+        <div
+          style={{
+            padding: "0.85rem 1.25rem",
+            background: "rgba(220, 38, 38, 0.08)",
+            border: "1px solid #DC2626",
+            borderRadius: "var(--wp-radius-sm, 6px)",
+            fontSize: "0.85rem",
+            color: "#DC2626",
+          }}
+        >
+          ⚠ {podError}
         </div>
       )}
 
