@@ -1,7 +1,9 @@
-import jwt from 'jsonwebtoken';
+import { SignJWT } from 'jose/jwt/sign';
+import { jwtVerify } from 'jose/jwt/verify';
 import { NextRequest, NextResponse } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'waypoint_jwt_super_secure_2026_random_key_change_in_production';
+const JWT_SECRET_STRING = process.env.JWT_SECRET || 'waypoint_jwt_super_secure_2026_random_key_change_in_production';
+export const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
 export const AUTH_COOKIE_NAME = 'wp_session';
 
 export interface AuthPayload {
@@ -12,15 +14,25 @@ export interface AuthPayload {
   outletId?: string | null;
 }
 
-export function signAuthToken(payload: AuthPayload, remember: boolean = true): string {
-  const expiresIn = remember ? '30d' : '24h';
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+export async function signAuthToken(payload: AuthPayload, remember: boolean = true): Promise<string> {
+  const expirationTime = remember ? '30d' : '24h';
+  return new SignJWT({ ...payload })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(expirationTime)
+    .sign(JWT_SECRET);
 }
 
-export function verifyAuthToken(token: string): AuthPayload | null {
+export async function verifyAuthToken(token: string): Promise<AuthPayload | null> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
-    return decoded;
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return {
+      userId: payload.userId as string,
+      email: payload.email as string,
+      name: payload.name as string,
+      role: payload.role as 'dispatcher' | 'loader' | 'driver' | 'store',
+      outletId: (payload.outletId as string | null | undefined) ?? null,
+    };
   } catch {
     return null;
   }
@@ -51,7 +63,7 @@ export function clearAuthCookie(response: NextResponse): void {
   });
 }
 
-export function getAuthFromRequest(req: NextRequest): AuthPayload | null {
+export async function getAuthFromRequest(req: NextRequest): Promise<AuthPayload | null> {
   const cookie = req.cookies.get(AUTH_COOKIE_NAME);
   if (!cookie || !cookie.value) {
     const authHeader = req.headers.get('authorization');

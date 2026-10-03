@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = signAuthToken(userPayload, remember);
+    const token = await signAuthToken(userPayload, remember);
     const response = NextResponse.json({
       success: true,
       user: userPayload,

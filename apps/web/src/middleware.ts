@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose/jwt/verify';
 
 const AUTH_COOKIE = 'wp_session';
+const JWT_SECRET_STRING = process.env.JWT_SECRET || 'waypoint_jwt_super_secure_2026_random_key_change_in_production';
+const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
 
 type UserRole = 'dispatcher' | 'loader' | 'driver' | 'store';
 
@@ -20,29 +23,26 @@ const ROLE_ROUTES: Record<UserRole, string> = {
   store: '/store',
 };
 
-function parseJwtPayload(token: string): SessionPayload | null {
+async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/_/g, '/').replace(/-/g, '+');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    const parsed = JSON.parse(jsonPayload) as SessionPayload;
-    if (parsed.exp && Date.now() >= parsed.exp * 1000) {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    if (!payload || !payload.role) {
       return null;
     }
-    return parsed;
+    return {
+      userId: payload.userId as string,
+      email: payload.email as string,
+      name: payload.name as string,
+      role: payload.role as UserRole,
+      outletId: (payload.outletId as string | null | undefined) ?? null,
+      exp: payload.exp,
+    };
   } catch {
     return null;
   }
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const protectedRoles = Object.keys(ROLE_ROUTES) as UserRole[];
@@ -52,7 +52,7 @@ export function middleware(req: NextRequest) {
     if (pathname === '/login') {
       const session = req.cookies.get(AUTH_COOKIE);
       if (session && session.value) {
-        const payload = parseJwtPayload(session.value);
+        const payload = await verifySessionToken(session.value);
         if (payload && payload.role && ROLE_ROUTES[payload.role]) {
           return NextResponse.redirect(new URL(ROLE_ROUTES[payload.role], req.url));
         }
@@ -68,7 +68,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const payload = parseJwtPayload(session.value);
+  const payload = await verifySessionToken(session.value);
   if (!payload || !payload.role) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('redirect', pathname);
