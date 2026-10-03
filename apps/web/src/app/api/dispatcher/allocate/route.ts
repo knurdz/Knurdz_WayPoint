@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "@/lib/rate_limiter";
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+    const limit = checkRateLimit(`allocate_${ip}`, 15, 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many allocation requests. Please wait before running optimization solver again.",
+          code: "RATE_LIMIT_EXCEEDED",
+        },
+        { status: 429, headers: { "Retry-After": String(limit.resetInSeconds) } }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     
     // Attempt to invoke the python allocation optimization engine if running
