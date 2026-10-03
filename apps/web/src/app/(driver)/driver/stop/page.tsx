@@ -198,6 +198,63 @@ export default function DriverStopPage() {
           </div>
         </section>
       </div>
+
+      <div
+        className="wp-mobile-action-bar"
+        style={{
+          position: 'sticky',
+          bottom: 12,
+          marginTop: 24,
+          padding: 12,
+          borderRadius: 12,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid #CBD5E1',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+          display: 'flex',
+          gap: 10,
+        }}
+      >
+        <Link
+          href="/driver/pod"
+          style={{
+            flex: 1,
+            height: 48,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: '#377A8B',
+            color: '#FFFFFF',
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 14,
+            textDecoration: 'none',
+          }}
+        >
+          <Camera size={18} /> Capture POD
+        </Link>
+        <Link
+          href="/driver/issue"
+          style={{
+            flex: 1,
+            height: 48,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: '#FFFFFF',
+            border: '1px solid #DC2626',
+            color: '#DC2626',
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 14,
+            textDecoration: 'none',
+          }}
+        >
+          <MessageSquareWarning size={18} /> Report Issue
+        </Link>
+      </div>
     </main>
   );
 }
