@@ -94,8 +94,8 @@ export async function POST(req: Request) {
       deferredOrders: [
         {
           orderId: "ORD00115",
-          reasonCode: "DEF_03",
-          description: "Departure window conflict after 07:30 cutoff",
+          reasonCode: "TIME_BUDGET",
+          description: "Pre dawn delivery budget exceeded for 08:00 cutoff",
         },
       ],
       ragStatus: {
