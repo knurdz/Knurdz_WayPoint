@@ -30,9 +30,11 @@ export default function AppShell({
           <Sidebar role={role} />
           <main style={{
             flex: 1,
+            position: 'relative',
             overflowY: 'auto',
             background: 'var(--wp-canvas, #F5F5F3)',
             padding: 24,
+            minWidth: 0,
           }}>
             {children}
           </main>
