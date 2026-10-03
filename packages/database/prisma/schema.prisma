@@ -1,4 +1,4 @@
-// Waypoint Intelligent Enterprise — Master Database Schema
+// Waypoint Intelligent Enterprise Master Database Schema
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -61,29 +61,31 @@ enum StopStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   passwordHash String
   name         String
   role         Role
   outletId     String?
-  outlet       Outlet?  @relation(fields: [outletId], references: [outletId])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  outlet       Outlet?    @relation(fields: [outletId], references: [outletId])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   auditLogs    AuditLog[]
 
+  @@index([role])
+  @@index([outletId])
   @@map("users")
 }
 
 model Outlet {
-  outletId          String     @id // e.g. "OUT001"
+  outletId          String     @id
   name              String
   brand             Brand
   district          String
-  depotId           String     // "Peliyagoda" or "Kandy"
+  depotId           String
   dockType          String     @default("street")
-  parkingConstraint String     @default("normal") // "normal", "van_only", "mall_dock"
-  mallWindow        String?    // e.g. "09:00-11:00"
+  parkingConstraint String     @default("normal")
+  mallWindow        String?
   windowOpenTime    String?    @default("05:00")
   windowCloseTime   String?    @default("07:30")
   latitude          Float?
@@ -92,82 +94,91 @@ model Outlet {
   tripStops         TripStop[]
   users             User[]
 
+  @@index([brand, district])
+  @@index([depotId])
   @@map("outlets")
 }
 
 model Vehicle {
-  vehicleId         String        @id // e.g. "VEH001"
-  type              VehicleType
-  temp              Temperature
-  weightCapKg       Float
-  volumeCapM3       Float
-  fuelType          String        @default("diesel")
-  kmPerL            Float
-  weeklyFuelQuotaL  Float
-  depotId           String        // "Peliyagoda" or "Kandy"
-  status            VehicleStatus @default(available)
-  trips             Trip[]
+  vehicleId        String        @id
+  type             VehicleType
+  temp             Temperature
+  weightCapKg      Float
+  volumeCapM3      Float
+  fuelType         String        @default("diesel")
+  kmPerL           Float
+  weeklyFuelQuotaL Float
+  depotId          String
+  status           VehicleStatus @default(available)
+  trips            Trip[]
 
+  @@index([depotId, status])
   @@map("vehicles")
 }
 
 model Order {
-  orderId              String          @id // e.g. "ORD-92308"
-  outletId             String
-  outlet               Outlet          @relation(fields: [outletId], references: [outletId])
-  orderDate            DateTime        @db.Date
-  tempRequirement      Temperature     @default(ambient)
-  orderUnits           Int
-  weightKg             Float
-  volumeM3             Float
-  status               OrderStatus     @default(confirmed)
-  planningBucket       PlanningBucket  @default(next_day)
-  deferredYesterday    Boolean         @default(false)
-  daysSinceLastServed  Int             @default(1)
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  items                OrderItem[]
-  tripStops            TripStop[]
-  deferrals            DeferralRecord[]
-  podRecords           PodRecord[]
+  orderId             String           @id
+  outletId            String
+  outlet              Outlet           @relation(fields: [outletId], references: [outletId])
+  orderDate           DateTime         @db.Date
+  tempRequirement     Temperature      @default(ambient)
+  orderUnits          Int
+  weightKg            Float
+  volumeM3            Float
+  status              OrderStatus      @default(confirmed)
+  planningBucket      PlanningBucket   @default(next_day)
+  deferredYesterday   Boolean          @default(false)
+  daysSinceLastServed Int              @default(1)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  items               OrderItem[]
+  tripStops           TripStop[]
+  deferrals           DeferralRecord[]
+  podRecords          PodRecord[]
 
   @@index([orderDate, status])
+  @@index([outletId])
+  @@index([status])
   @@map("orders")
 }
 
 model OrderItem {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   orderId     String
-  order       Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  order       Order  @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
   sku         String
   description String
   quantity    Int
   weightKg    Float
   volumeM3    Float
 
+  @@index([orderId])
   @@map("order_items")
 }
 
 model Trip {
-  tripId           String     @id // e.g. "TRIP-001"
+  tripId           String     @id
   vehicleId        String
   vehicle          Vehicle    @relation(fields: [vehicleId], references: [vehicleId])
-  tripNumber       Int        // 1 or 2
+  tripNumber       Int
   tripDate         DateTime   @db.Date
   brand            Brand
   district         String
-  depotId          String     // "Peliyagoda" or "Kandy"
+  depotId          String
   totalWeightKg    Float      @default(0)
   totalVolumeM3    Float      @default(0)
   totalDurationMin Float      @default(0)
   fuelConsumedL    Float      @default(0)
-  status           String     @default("planned") // planned, loading, en_route, completed
+  status           String     @default("planned")
   departureTime    DateTime?
   completedTime    DateTime?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
   stops            TripStop[]
 
+  @@index([vehicleId])
+  @@index([tripDate, status])
+  @@index([depotId])
   @@map("trips")
 }
 
@@ -175,7 +186,7 @@ model TripStop {
   id             String      @id @default(uuid())
   tripId         String
   trip           Trip        @relation(fields: [tripId], references: [tripId], onDelete: Cascade)
-  stopSequence   Int         // 1, 2, 3 ...
+  stopSequence   Int
   outletId       String
   outlet         Outlet      @relation(fields: [outletId], references: [outletId])
   orderId        String
@@ -186,36 +197,44 @@ model TripStop {
   status         StopStatus  @default(pending)
   podRecords     PodRecord[]
 
+  @@index([tripId])
+  @@index([outletId])
+  @@index([orderId])
   @@map("trip_stops")
 }
 
 model PodRecord {
-  id             String    @id @default(uuid())
-  idempotencyKey String    @unique // UUIDv4
-  stopId         String
-  stop           TripStop  @relation(fields: [stopId], references: [id], onDelete: Cascade)
-  orderId        String
-  order          Order     @relation(fields: [orderId], references: [orderId])
-  signatureData  String?   @db.Text
-  photoPath      String?
-  receivedUnits  Int
-  notes          String?
-  isOffline      Boolean   @default(false)
+  id              String   @id @default(uuid())
+  idempotencyKey  String   @unique
+  stopId          String
+  stop            TripStop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [orderId])
+  signatureData   String?  @db.Text
+  photoPath       String?
+  receivedUnits   Int
+  notes           String?
+  isOffline       Boolean  @default(false)
   clientTimestamp DateTime
-  syncedAt       DateTime  @default(now())
+  syncedAt        DateTime @default(now())
 
+  @@index([stopId])
+  @@index([orderId])
+  @@index([syncedAt])
   @@map("pod_records")
 }
 
 model DeferralRecord {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   orderId         String
-  order           Order    @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
-  reasonCode      String   // DEF-01, DEF-02 ...
+  order           Order     @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  reasonCode      String
   reasonNotes     String?
-  deferredDate    DateTime @default(now())
+  deferredDate    DateTime  @default(now())
   rescheduledDate DateTime?
 
+  @@index([orderId])
+  @@index([reasonCode])
   @@map("deferral_records")
 }
 
@@ -227,5 +246,7 @@ model AuditLog {
   details   String?  @db.Text
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([createdAt])
   @@map("audit_logs")
 }
