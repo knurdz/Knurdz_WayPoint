@@ -241,11 +241,11 @@ export default function OrderQueueTable({ initialOrders }: OrderQueueTableProps)
       )}
 
       {/* High Density Table */}
-      <div style={{
+      <div className="wp-table-wrap" style={{
         background: 'var(--wp-panel, #FFFFFF)',
         border: '1px solid var(--wp-border, rgba(0,0,0,0.08))',
         borderRadius: 12,
-        overflow: 'hidden',
+        overflowX: 'auto',
       }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
           <thead>

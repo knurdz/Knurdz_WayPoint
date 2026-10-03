@@ -26,6 +26,8 @@ export default function OrderQueuePage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
         padding: '20px 24px',
         borderRadius: 12,
         background: 'var(--wp-panel, #FFFFFF)',

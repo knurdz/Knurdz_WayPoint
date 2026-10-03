@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import CutoffTicker from './CutoffTicker';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Menu } from 'lucide-react';
 
 interface TopBarProps {
   role?: string;
@@ -12,6 +12,7 @@ interface TopBarProps {
   depot?: string;
   children?: React.ReactNode;
   onOpenSearch?: () => void;
+  onToggleSidebar?: () => void;
 }
 
 export default function TopBar({
@@ -20,6 +21,7 @@ export default function TopBar({
   depot = 'Peliyagoda Hub',
   children,
   onOpenSearch,
+  onToggleSidebar,
 }: TopBarProps) {
   const router = useRouter();
 
@@ -46,7 +48,26 @@ export default function TopBar({
       top: 0,
       zIndex: 40,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 240 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="wp-nav-toggle"
+          aria-label="Toggle navigation"
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 6,
+            borderRadius: 6,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: 'var(--wp-heading, #1A1C1C)',
+          }}
+        >
+          <Menu size={22} />
+        </button>
+
         <a href={`/${role}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img src="/assets/logo-mark.svg" alt="Waypoint" width={32} height={32} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -59,7 +80,7 @@ export default function TopBar({
           </div>
         </a>
 
-        <div style={{
+        <div className="wp-topbar-depot-pill" style={{
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -77,7 +98,7 @@ export default function TopBar({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="wp-topbar-search-wrap" style={{ display: 'flex', alignItems: 'center' }}>
         <button
           type="button"
           onClick={onOpenSearch}
@@ -96,15 +117,17 @@ export default function TopBar({
             fontSize: 13,
           }}
         >
-          <span>Search pages, rules, outlets...</span>
+          <span className="wp-search-trigger-text">Search pages, rules, outlets...</span>
           <kbd className="wp-kbd" style={{ fontSize: 11, padding: '2px 5px', borderRadius: 4, border: '1px solid var(--wp-border)' }}>
             ⌘K
           </kbd>
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <CutoffTicker />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="wp-topbar-ticker-wrap">
+          <CutoffTicker />
+        </div>
         {children}
 
         <ThemeToggle />
@@ -112,7 +135,7 @@ export default function TopBar({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 8,
           padding: '4px 10px',
           borderRadius: 20,
           background: 'var(--wp-subpanel, #F8F8F7)',
@@ -129,10 +152,11 @@ export default function TopBar({
             justifyContent: 'center',
             fontSize: 12,
             fontWeight: 700,
+            flexShrink: 0,
           }}>
             {userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
           </div>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--wp-heading, #1A1C1C)' }}>
+          <span className="wp-topbar-user-name" style={{ fontSize: 13, fontWeight: 600, color: 'var(--wp-heading, #1A1C1C)', whiteSpace: 'nowrap' }}>
             {userName}
           </span>
           <button
