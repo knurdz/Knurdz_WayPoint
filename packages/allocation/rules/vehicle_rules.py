@@ -37,15 +37,15 @@ def check_depot_alignment(vehicle_depot: str, order_depots: List[str]) -> RuleRe
     )
 
 def check_cold_chain(vehicle_temp: str, temp_requirements: List[str]) -> RuleResult:
-    has_chilled = any(t == "chilled" for t in temp_requirements)
-    passed = not has_chilled or vehicle_temp == "reefer"
-    msg = "Cold chain integrity preserved" if passed else "Carries chilled orders on non refrigerated vehicle"
+    has_cold = any(t in ["chilled", "frozen"] for t in temp_requirements)
+    passed = not has_cold or vehicle_temp == "reefer"
+    msg = "Cold chain integrity preserved" if passed else "Carries refrigerated orders on non refrigerated vehicle"
     return RuleResult(
         rule_id="R10",
         rule_name="Cold Chain Temperature Compliance",
         passed=passed,
         message=msg,
-        details={"vehicle_temp": vehicle_temp, "has_chilled": has_chilled}
+        details={"vehicle_temp": vehicle_temp, "has_cold": has_cold}
     )
 
 def check_parking_access(vehicle_type: str, parking_constraints: List[str]) -> RuleResult:
