@@ -111,7 +111,11 @@ export default function LoginPage() {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError(null);
+                  }}
                   autoComplete="username"
                   required
                 />
@@ -125,7 +129,11 @@ export default function LoginPage() {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
                     autoComplete="current-password"
                     required
                   />
