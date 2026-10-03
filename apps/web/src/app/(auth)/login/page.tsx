@@ -38,8 +38,9 @@ export default function LoginPage() {
 
       router.push(data.redirectUrl || '/dispatcher');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Unable to connect to authentication server');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unable to connect to authentication server';
+      setError(message);
     } finally {
       setLoading(false);
     }
