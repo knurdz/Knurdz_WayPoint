@@ -7,7 +7,7 @@ export async function getCurrentUser(): Promise<AuthPayload | null> {
   if (!sessionCookie || !sessionCookie.value) {
     return null;
   }
-  return verifyAuthToken(sessionCookie.value);
+  return await verifyAuthToken(sessionCookie.value);
 }
 
 export async function requireUserRole(allowedRoles: string[]): Promise<AuthPayload> {
