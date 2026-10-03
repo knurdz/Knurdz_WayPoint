@@ -9,11 +9,21 @@ export interface CutoffState {
   formatted: string;
   isPastCutoff: boolean;
   urgency: 'normal' | 'warning' | 'critical' | 'passed';
+  mounted: boolean;
 }
 
+const DEFAULT_STATE: CutoffState = {
+  hours: 0,
+  minutes: 0,
+  seconds: 0,
+  formatted: '16:00 SLST',
+  isPastCutoff: false,
+  urgency: 'normal',
+  mounted: false,
+};
+
 export function useCutoffCountdown(): CutoffState {
-  const calculate = (): CutoffState => {
-    // Current time in SLST (UTC + 05:30)
+  const calculate = (): Omit<CutoffState, 'mounted'> => {
     const now = new Date();
     const utcMillis = now.getTime() + now.getTimezoneOffset() * 60000;
     const slstMillis = utcMillis + 5.5 * 3600000;
@@ -22,7 +32,7 @@ export function useCutoffCountdown(): CutoffState {
     const targetDate = new Date(slstMillis);
     targetDate.setHours(16, 0, 0, 0);
 
-    let diffSeconds = Math.floor((targetDate.getTime() - slstDate.getTime()) / 1000);
+    const diffSeconds = Math.floor((targetDate.getTime() - slstDate.getTime()) / 1000);
 
     if (diffSeconds <= 0) {
       return {
@@ -59,11 +69,12 @@ export function useCutoffCountdown(): CutoffState {
     };
   };
 
-  const [state, setState] = useState<CutoffState>(calculate);
+  const [state, setState] = useState<CutoffState>(DEFAULT_STATE);
 
   useEffect(() => {
+    setState({ ...calculate(), mounted: true });
     const timer = setInterval(() => {
-      setState(calculate());
+      setState({ ...calculate(), mounted: true });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
