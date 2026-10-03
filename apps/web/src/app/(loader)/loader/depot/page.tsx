@@ -8,23 +8,23 @@ export default function LoaderDepotPage() {
   const [date, setDate] = useState("2026-09-30");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+    <div className="wp-stack">
       <div className="screen-page-header">
         <div>
           <span className="wp-label">LOAD 01</span>
-          <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
+          <h1 className="wp-headline-md wp-mt-xs wp-m0">
             Select warehouse context
           </h1>
         </div>
-        <Link href="/loader/runs" className="wp-btn wp-btn-primary" style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}>
+        <Link href="/loader/runs" className="wp-btn wp-btn-primary wp-text-xs wp-pad-sm">
           Continue
         </Link>
       </div>
 
-      <div className="screen-grid-2" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1.25rem" }}>
-        <section className="wp-panel screen-panel" style={{ padding: "1.5rem" }}>
+      <div className="screen-grid-2 wp-grid-sidebar">
+        <section className="wp-panel screen-panel wp-pad-lg">
           <p className="wp-label">Depot</p>
-          <div style={{ display: "flex", gap: "0.5rem", margin: "0.5rem 0 1.25rem" }}>
+          <div className="wp-row-sm wp-mt-sm wp-mb-md">
             <button
               type="button"
               className={`wp-btn ${selectedDepot === "Peliyagoda" ? "wp-btn-primary" : "wp-btn-outline"}`}
@@ -41,44 +41,43 @@ export default function LoaderDepotPage() {
             </button>
           </div>
 
-          <div className="wp-field" style={{ marginBottom: "1rem" }}>
-            <label htmlFor="load-date" style={{ display: "block", marginBottom: "0.35rem", fontSize: "0.8rem", fontWeight: 600 }}>
+          <div className="wp-field wp-mb-md">
+            <label htmlFor="load-date" className="wp-text-sm wp-semibold wp-mb-xs" style={{ display: "block" }}>
               Delivery date
             </label>
             <input
-              className="wp-input font-mono"
+              className="wp-input font-mono wp-w-full wp-pad-sm"
               id="load-date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem" }}
             />
           </div>
 
-          <p className="wp-subtext" style={{ fontSize: "0.8rem" }}>
+          <p className="wp-subtext wp-text-sm">
             Published plans only · last sync 04:12 AM
           </p>
 
-          <Link href="/loader/runs" className="wp-btn wp-btn-primary" style={{ marginTop: "1.25rem", display: "inline-block" }}>
+          <Link href="/loader/runs" className="wp-btn wp-btn-primary wp-mt-md" style={{ display: "inline-block" }}>
             Continue to vehicle runs
           </Link>
         </section>
 
-        <aside className="wp-panel screen-panel" style={{ padding: "1.5rem" }}>
+        <aside className="wp-panel screen-panel wp-pad-lg">
           <span className="wp-label">Tomorrow published plan</span>
-          <h2 className="wp-headline-sm" style={{ margin: "0.35rem 0 1rem" }}>
+          <h2 className="wp-headline-sm wp-mt-xs wp-mb-md">
             30 Sep · Fresh window
           </h2>
-          <div className="screen-list" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--wp-border-color)" }}>
+          <div className="screen-list wp-stack-sm">
+            <div className="wp-list-row">
               <span>Peliyagoda trips</span>
               <strong className="font-mono">6</strong>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--wp-border-color)" }}>
+            <div className="wp-list-row">
               <span>Kandy trips</span>
               <strong className="font-mono">2</strong>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0" }}>
+            <div className="wp-list-row">
               <span>Reefer vehicles</span>
               <strong className="font-mono">9</strong>
             </div>

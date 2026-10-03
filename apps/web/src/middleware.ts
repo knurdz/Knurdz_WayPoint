@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const AUTH_COOKIE = 'wp_session';
 
-const ROLE_ROUTES: Record<string, string> = {
+type UserRole = 'dispatcher' | 'loader' | 'driver' | 'store';
+
+interface SessionPayload {
+  userId: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  outletId?: string | null;
+  exp?: number;
+}
+
+const ROLE_ROUTES: Record<UserRole, string> = {
   dispatcher: '/dispatcher',
   loader: '/loader',
   driver: '/driver',
   store: '/store',
 };
 
-function parseJwtPayload(token: string): any | null {
+function parseJwtPayload(token: string): SessionPayload | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -21,7 +32,7 @@ function parseJwtPayload(token: string): any | null {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-    const parsed = JSON.parse(jsonPayload);
+    const parsed = JSON.parse(jsonPayload) as SessionPayload;
     if (parsed.exp && Date.now() >= parsed.exp * 1000) {
       return null;
     }
@@ -34,11 +45,8 @@ function parseJwtPayload(token: string): any | null {
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isProtected =
-    pathname.startsWith('/dispatcher') ||
-    pathname.startsWith('/loader') ||
-    pathname.startsWith('/driver') ||
-    pathname.startsWith('/store');
+  const protectedRoles = Object.keys(ROLE_ROUTES) as UserRole[];
+  const isProtected = protectedRoles.some((role) => pathname.startsWith(ROLE_ROUTES[role]));
 
   if (!isProtected) {
     if (pathname === '/login') {
@@ -69,23 +77,14 @@ export function middleware(req: NextRequest) {
     return response;
   }
 
-  const userRole = payload.role as string;
+  const userRole = payload.role;
 
-  if (pathname.startsWith('/dispatcher') && userRole !== 'dispatcher') {
-    const correctHome = ROLE_ROUTES[userRole] || '/login';
-    return NextResponse.redirect(new URL(correctHome, req.url));
-  }
-  if (pathname.startsWith('/loader') && userRole !== 'loader') {
-    const correctHome = ROLE_ROUTES[userRole] || '/login';
-    return NextResponse.redirect(new URL(correctHome, req.url));
-  }
-  if (pathname.startsWith('/driver') && userRole !== 'driver') {
-    const correctHome = ROLE_ROUTES[userRole] || '/login';
-    return NextResponse.redirect(new URL(correctHome, req.url));
-  }
-  if (pathname.startsWith('/store') && userRole !== 'store') {
-    const correctHome = ROLE_ROUTES[userRole] || '/login';
-    return NextResponse.redirect(new URL(correctHome, req.url));
+  for (const role of protectedRoles) {
+    const routePrefix = ROLE_ROUTES[role];
+    if (pathname.startsWith(routePrefix) && userRole !== role) {
+      const correctHome = ROLE_ROUTES[userRole] || '/login';
+      return NextResponse.redirect(new URL(correctHome, req.url));
+    }
   }
 
   return NextResponse.next();

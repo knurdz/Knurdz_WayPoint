@@ -34,58 +34,50 @@ export default function LoaderSignoffPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+    <div className="wp-stack">
       <div className="screen-page-header">
         <div>
           <span className="wp-label">LOAD 05</span>
-          <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
+          <h1 className="wp-headline-md wp-mt-xs wp-m0">
             Ready for departure
           </h1>
         </div>
-        <Link href="/driver/route" className="wp-btn wp-btn-primary" style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}>
+        <Link href="/driver/route" className="wp-btn wp-btn-primary wp-text-xs wp-pad-sm">
           Unlock driver route
         </Link>
       </div>
 
       {signedOff && (
-        <div
-          style={{
-            padding: "1rem 1.5rem",
-            background: "var(--wp-card-bg, #f0fdf4)",
-            border: "1px solid var(--wp-success, #22c55e)",
-            borderRadius: "var(--wp-radius-sm, 6px)",
-            fontSize: "0.9rem",
-          }}
-        >
+        <div className="wp-card-panel wp-pad-md wp-text-sm" style={{ background: "var(--wp-card-bg, #f0fdf4)", borderColor: "var(--wp-success, #22c55e)" }}>
           ✓ Departure Gate Pass <strong>{gatePass}</strong> successfully issued. Cold chain seal sealed. Kamal Silva driver run sheet unlocked for Route R025229.
         </div>
       )}
 
-      <div className="screen-grid-2" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "1.25rem" }}>
-        <section className="wp-panel screen-panel" style={{ padding: "1.25rem" }}>
-          <dl className="wp-specs-list" style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "0.75rem", margin: 0 }}>
-            <dt style={{ color: "var(--wp-muted)" }}>Vehicle</dt>
-            <dd className="font-mono" style={{ margin: 0, fontWeight: 700 }}>
+      <div className="screen-grid-2 wp-grid-sidebar">
+        <section className="wp-panel screen-panel wp-pad-md">
+          <dl className="wp-specs-list wp-m0" style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "0.75rem" }}>
+            <dt className="wp-text-muted">Vehicle</dt>
+            <dd className="font-mono wp-m0 wp-bold">
               VEH037 · Trip 1
             </dd>
 
-            <dt style={{ color: "var(--wp-muted)" }}>Loader</dt>
-            <dd style={{ margin: 0 }}>Priya Fernando</dd>
+            <dt className="wp-text-muted">Loader</dt>
+            <dd className="wp-m0">Priya Fernando</dd>
 
-            <dt style={{ color: "var(--wp-muted)" }}>Stops loaded</dt>
-            <dd style={{ margin: 0 }}>4 / 4 reverse sequence complete</dd>
+            <dt className="wp-text-muted">Stops loaded</dt>
+            <dd className="wp-m0">4 / 4 reverse sequence complete</dd>
 
-            <dt style={{ color: "var(--wp-muted)" }}>Timestamp</dt>
-            <dd className="font-mono" style={{ margin: 0 }}>
+            <dt className="wp-text-muted">Timestamp</dt>
+            <dd className="font-mono wp-m0">
               04:48 AM SLST
             </dd>
           </dl>
 
-          <p className="wp-subtext" style={{ marginTop: "1.25rem" }}>
+          <p className="wp-subtext wp-mt-md">
             Checklist locked after sign off · driver route R025229 activated.
           </p>
 
-          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.25rem" }}>
+          <div className="wp-row wp-mt-md">
             <button
               type="button"
               className="wp-btn wp-btn-primary"
@@ -100,15 +92,15 @@ export default function LoaderSignoffPage() {
           </div>
         </section>
 
-        <aside className="wp-panel screen-panel" style={{ padding: "1.25rem" }}>
+        <aside className="wp-panel screen-panel wp-pad-md">
           <span className="wp-label">Unlocks next</span>
-          <h2 className="wp-headline-sm" style={{ margin: "0.35rem 0 0.5rem" }}>
+          <h2 className="wp-headline-sm wp-mt-xs wp-mb-sm">
             Driver route R025229
           </h2>
           <p className="wp-subtext">
             Sign off locks the reverse checklist and releases Kamal Silva run sheet for delivery execution.
           </p>
-          <div style={{ marginTop: "1.5rem" }}>
+          <div className="wp-mt-lg">
             <Link href="/driver/route" className="wp-btn wp-btn-primary">
               Open driver route
             </Link>
