@@ -234,3 +234,148 @@ def test_allocation_brand_and_district_purity():
     assert evaluation.is_valid is False
     assert any("brand" in v.lower() for v in evaluation.violations)
     assert any("district" in v.lower() for v in evaluation.violations)
+
+def test_allocation_isolated_brand_purity_violation():
+    vehicle = {
+        "vehicle_id": "VEH010",
+        "type": "truck",
+        "temp": "ambient",
+        "depot": "Peliyagoda",
+        "weight_cap_kg": 5000.0,
+        "volume_cap_m3": 20.0,
+    }
+    orders = [
+        {
+            "order_id": "ORD011",
+            "brand": "Fresh",
+            "district": "Colombo",
+            "depot": "Peliyagoda",
+            "temp_requirement": "ambient",
+            "parking_constraint": "normal",
+            "dock_type": "street",
+            "weight_kg": 400.0,
+            "volume_m3": 1.5,
+        },
+        {
+            "order_id": "ORD012",
+            "brand": "Style",
+            "district": "Colombo",
+            "depot": "Peliyagoda",
+            "temp_requirement": "ambient",
+            "parking_constraint": "normal",
+            "dock_type": "street",
+            "weight_kg": 500.0,
+            "volume_m3": 2.0,
+        },
+    ]
+    evaluation = evaluate_trip(trip_id=1, vehicle=vehicle, orders=orders)
+    assert evaluation.is_valid is False
+    assert any("brand" in v.lower() for v in evaluation.violations)
+
+def test_allocation_isolated_district_purity_violation():
+    vehicle = {
+        "vehicle_id": "VEH011",
+        "type": "truck",
+        "temp": "ambient",
+        "depot": "Peliyagoda",
+        "weight_cap_kg": 5000.0,
+        "volume_cap_m3": 20.0,
+    }
+    orders = [
+        {
+            "order_id": "ORD013",
+            "brand": "Style",
+            "district": "Colombo",
+            "depot": "Peliyagoda",
+            "temp_requirement": "ambient",
+            "parking_constraint": "normal",
+            "dock_type": "street",
+            "weight_kg": 400.0,
+            "volume_m3": 1.5,
+        },
+        {
+            "order_id": "ORD014",
+            "brand": "Style",
+            "district": "Kandy",
+            "depot": "Peliyagoda",
+            "temp_requirement": "ambient",
+            "parking_constraint": "normal",
+            "dock_type": "street",
+            "weight_kg": 500.0,
+            "volume_m3": 2.0,
+        },
+    ]
+    evaluation = evaluate_trip(trip_id=1, vehicle=vehicle, orders=orders)
+    assert evaluation.is_valid is False
+    assert any("district" in v.lower() for v in evaluation.violations)
+
+def test_allocation_trip_budget_exceeded():
+    vehicle = {
+        "vehicle_id": "VEH012",
+        "type": "truck",
+        "temp": "ambient",
+        "depot": "Peliyagoda",
+        "weight_cap_kg": 10000.0,
+        "volume_cap_m3": 50.0,
+    }
+    many_orders = [
+        {
+            "order_id": f"ORD_BULK_{i}",
+            "brand": "Fresh",
+            "district": "Colombo",
+            "depot": "Peliyagoda",
+            "temp_requirement": "ambient",
+            "parking_constraint": "normal",
+            "dock_type": "street",
+            "weight_kg": 100.0,
+            "volume_m3": 0.5,
+        }
+        for i in range(12)
+    ]
+    evaluation = evaluate_trip(trip_id=1, vehicle=vehicle, orders=many_orders)
+    assert evaluation.is_valid is False
+    assert any("duration" in v.lower() or "time" in v.lower() or "limit" in v.lower() for v in evaluation.violations)
+
+def test_allocation_empty_orders_payload():
+    vehicle = {
+        "vehicle_id": "VEH013",
+        "type": "truck",
+        "temp": "ambient",
+        "depot": "Peliyagoda",
+        "weight_cap_kg": 5000.0,
+        "volume_cap_m3": 20.0,
+    }
+    evaluation = evaluate_trip(trip_id=1, vehicle=vehicle, orders=[])
+    assert evaluation.is_valid is True
+    assert evaluation.total_weight_kg == 0.0
+    assert evaluation.total_volume_m3 == 0.0
+    assert evaluation.weight_utilization_pct == 0.0
+    assert evaluation.volume_utilization_pct == 0.0
+
+def test_allocation_extreme_volume_overload():
+    vehicle = {
+        "vehicle_id": "VEH014",
+        "type": "van",
+        "temp": "ambient",
+        "depot": "Peliyagoda",
+        "weight_cap_kg": 5000.0,
+        "volume_cap_m3": 10.0,
+    }
+    orders = [
+        {
+            "order_id": "ORD015",
+            "brand": "Fresh",
+            "district": "Colombo",
+            "depot": "Peliyagoda",
+            "temp_requirement": "ambient",
+            "parking_constraint": "normal",
+            "dock_type": "street",
+            "weight_kg": 500.0,
+            "volume_m3": 35.0,
+        }
+    ]
+    evaluation = evaluate_trip(trip_id=1, vehicle=vehicle, orders=orders)
+    assert evaluation.is_valid is False
+    assert evaluation.volume_utilization_pct > 100.0
+    assert evaluation.rag_status == "RED"
+    assert any("volume" in v.lower() for v in evaluation.violations)
