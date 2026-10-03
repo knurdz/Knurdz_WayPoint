@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 import CopilotModal from '../copilot/CopilotModal';
@@ -21,13 +21,36 @@ export default function AppShell({
   children,
 }: AppShellProps) {
   const { isOpen, openCopilot, closeCopilot } = useCopilot();
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (navOpen) {
+      document.body.classList.add('wp-nav-open');
+    } else {
+      document.body.classList.remove('wp-nav-open');
+    }
+    return () => {
+      document.body.classList.remove('wp-nav-open');
+    };
+  }, [navOpen]);
 
   return (
     <ToastProvider>
       <div className="wp-app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <TopBar role={role} userName={userName} depot={depot} onOpenSearch={openCopilot} />
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar role={role} />
+        <TopBar
+          role={role}
+          userName={userName}
+          depot={depot}
+          onOpenSearch={openCopilot}
+          onToggleSidebar={() => setNavOpen((prev) => !prev)}
+        />
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+          <div
+            className="wp-sidebar-backdrop"
+            onClick={() => setNavOpen(false)}
+            aria-hidden="true"
+          />
+          <Sidebar role={role} onClose={() => setNavOpen(false)} />
           <main style={{
             flex: 1,
             position: 'relative',

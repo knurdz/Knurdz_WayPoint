@@ -9400,3 +9400,88 @@ body.wp-agent-live .wp-agent-glow {
     margin: 0.65rem 0.75rem 0.85rem;
   }
 }
+
+@media (min-width: 1024px) {
+  .wp-app-shell .wp-sidebar {
+    position: static;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    z-index: 10;
+    height: calc(100vh - 64px);
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .wp-sidebar-mobile-header {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .wp-app-shell .wp-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    height: 100vh;
+    max-height: 100vh;
+    width: min(280px, 88vw);
+    min-width: 0;
+    max-width: min(280px, 88vw);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  body.wp-nav-open .wp-app-shell .wp-sidebar {
+    transform: translateX(0);
+  }
+
+  .wp-sidebar-mobile-header {
+    display: flex !important;
+  }
+
+  .wp-nav-toggle {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .wp-topbar-depot-pill,
+  .wp-search-trigger-text,
+  .wp-topbar-search-wrap .wp-kbd {
+    display: none !important;
+  }
+
+  .wp-topbar {
+    padding: 0 12px !important;
+  }
+
+  .wp-topbar-search-wrap .wp-search-trigger {
+    padding: 8px !important;
+  }
+
+  .route-layout,
+  .screen-grid-2,
+  .screen-grid-3,
+  .store-portal-layout,
+  .wp-fleet-map-layout,
+  .deg-store-dual {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .wp-topbar-user-name,
+  .wp-topbar-ticker-wrap {
+    display: none !important;
+  }
+}
+
+.wp-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

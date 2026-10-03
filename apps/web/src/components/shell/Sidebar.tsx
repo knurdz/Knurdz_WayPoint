@@ -31,6 +31,7 @@ import {
   BellOff,
   Route,
   PackageOpen,
+  X,
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -84,9 +85,10 @@ const STORE_ITEMS: SidebarItem[] = [
 
 interface SidebarProps {
   role?: string;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ role = 'dispatcher' }: SidebarProps) {
+export default function Sidebar({ role = 'dispatcher', onClose }: SidebarProps) {
   const pathname = usePathname();
 
   let items = DISPATCHER_ITEMS;
@@ -99,7 +101,6 @@ export default function Sidebar({ role = 'dispatcher' }: SidebarProps) {
   return (
     <aside className="wp-sidebar" style={{
       width: 240,
-      minWidth: 240,
       borderRight: '1px solid var(--wp-border, rgba(0,0,0,0.08))',
       background: 'var(--wp-subpanel, #F8F8F7)',
       padding: '16px 12px',
@@ -107,7 +108,40 @@ export default function Sidebar({ role = 'dispatcher' }: SidebarProps) {
       flexDirection: 'column',
       gap: 4,
       minHeight: 'calc(100vh - 64px)',
+      boxSizing: 'border-box',
     }}>
+      <div className="wp-sidebar-mobile-header" style={{
+        display: 'none',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '4px 8px 12px',
+        borderBottom: '1px solid var(--wp-border, rgba(0,0,0,0.08))',
+        marginBottom: 8,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/assets/logo-mark.svg" alt="Waypoint" width={24} height={24} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--wp-heading, #1A1C1C)' }}>Waypoint</span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close menu"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 6,
+            borderRadius: 6,
+            color: 'var(--wp-muted, #6E838A)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <X size={20} />
+        </button>
+      </div>
+
       {items.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
@@ -130,6 +164,7 @@ export default function Sidebar({ role = 'dispatcher' }: SidebarProps) {
             )}
             <Link
               href={item.href}
+              onClick={onClose}
               style={{
                 display: 'flex',
                 alignItems: 'center',
