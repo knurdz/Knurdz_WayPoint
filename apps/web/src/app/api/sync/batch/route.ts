@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@waypoint/database";
+import { resolveSyncConflict, ClientRecord, ServerRecord } from "@/lib/conflict_resolver";
 
 export async function POST(req: Request) {
   try {
@@ -8,16 +9,40 @@ export async function POST(req: Request) {
 
     const processedPods: string[] = [];
     const processedTemps: string[] = [];
-    const conflicts: Array<{ id: string; reason: string }> = [];
+    const conflicts: Array<{ id: string; reason: string; resolution: string }> = [];
+
+    const mockServerState: Record<string, ServerRecord> = {
+      OUT003: {
+        deliveryCode: "OUT003",
+        serverStatus: "DEFERRED",
+        serverTimestamp: "2026-10-02T06:00:00.000Z",
+        deferralReason: "DEF 02 Coolroom capacity restriction",
+      },
+    };
 
     for (const pod of pods) {
-      if (pod.deliveryCode === "OUT003") {
+      const clientRecord: ClientRecord = {
+        id: pod.id || pod.deliveryCode,
+        deliveryCode: pod.deliveryCode,
+        action: "POD_CAPTURE",
+        timestamp: pod.timestamp || new Date().toISOString(),
+        signatureData: pod.signatureData || "DATA_PRESENT",
+        photoCaptured: pod.photoCaptured ?? true,
+        receiverName: pod.receiverName,
+      };
+
+      const serverRecord = mockServerState[pod.deliveryCode];
+      const result = resolveSyncConflict(clientRecord, serverRecord);
+
+      if (result.resolutionSource === "CLIENT_POD_OVERRIDE" && serverRecord) {
         conflicts.push({
-          id: pod.id || pod.deliveryCode,
-          reason: "Server marked order deferred while device was offline",
+          id: clientRecord.id,
+          reason: "Order deferred centrally while vehicle was out of range",
+          resolution: result.explanation,
         });
+        processedPods.push(clientRecord.id);
       } else {
-        processedPods.push(pod.id || pod.deliveryCode);
+        processedPods.push(clientRecord.id);
       }
     }
 
@@ -44,7 +69,7 @@ export async function POST(req: Request) {
       processedTemps,
       conflicts,
       auditId: auditEntry ? auditEntry.id : null,
-      message: "Sync batch processed successfully",
+      message: "Sync batch processed successfully with conflict matrix",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Sync error";
