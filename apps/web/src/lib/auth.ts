@@ -2,7 +2,15 @@ import { SignJWT } from 'jose/jwt/sign';
 import { jwtVerify } from 'jose/jwt/verify';
 import { NextRequest, NextResponse } from 'next/server';
 
-const JWT_SECRET_STRING = process.env.JWT_SECRET || 'waypoint_jwt_super_secure_2026_random_key_change_in_production';
+const DEFAULT_INSECURE_SECRET = 'waypoint_jwt_super_secure_2026_random_key_change_in_production';
+const JWT_SECRET_STRING = process.env.JWT_SECRET || DEFAULT_INSECURE_SECRET;
+
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_INSECURE_SECRET)) {
+  if (process.env.NEXT_PHASE !== 'phase-production-build') {
+    console.warn('SECURITY ALERT: Production environment running with default static JWT secret. Set JWT_SECRET in production config.');
+  }
+}
+
 export const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
 export const AUTH_COOKIE_NAME = 'wp_session';
 

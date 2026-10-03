@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose/jwt/verify';
-
-const AUTH_COOKIE = 'wp_session';
-const JWT_SECRET_STRING = process.env.JWT_SECRET || 'waypoint_jwt_super_secure_2026_random_key_change_in_production';
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
+import { JWT_SECRET, AUTH_COOKIE_NAME as AUTH_COOKIE } from '@/lib/auth';
 
 type UserRole = 'dispatcher' | 'loader' | 'driver' | 'store';
 
