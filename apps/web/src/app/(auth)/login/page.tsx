@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -150,7 +151,7 @@ export default function LoginPage() {
                   />
                   <span>Remember for 30 Days</span>
                 </label>
-                <a className="wp-login-forgot" href="#forgot">Forgot password</a>
+                <Link className="wp-login-forgot" href="/forgot-password">Forgot password</Link>
               </div>
 
               <button
