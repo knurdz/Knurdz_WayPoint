@@ -1,7 +1,15 @@
+"""
+Waypoint Feasibility Engine Vehicle Rules
+Validates fleet existence, maintenance availability, cold chain, access constraints, and payload capacities.
+"""
+
 from typing import Dict, Any, List
 from .types import RuleResult
 
 def check_vehicle_exists(vehicle_id: str, fleet_catalog: Dict[str, Any]) -> RuleResult:
+    """
+    Verifies that the assigned vehicle exists within the registered master fleet catalog.
+    """
     passed = vehicle_id in fleet_catalog
     msg = "Vehicle exists in fleet catalog" if passed else f"Unknown vehicle id {vehicle_id}"
     return RuleResult(
@@ -13,6 +21,9 @@ def check_vehicle_exists(vehicle_id: str, fleet_catalog: Dict[str, Any]) -> Rule
     )
 
 def check_vehicle_available(vehicle_id: str, scenario: str, fleet_status: Dict[str, str]) -> RuleResult:
+    """
+    Verifies that the vehicle is operational and not scheduled for workshop maintenance.
+    """
     status = fleet_status.get(vehicle_id, "available")
     passed = status == "available"
     msg = "Vehicle available for dispatch" if passed else f"Vehicle {vehicle_id} is in workshop on {scenario}"
@@ -25,6 +36,9 @@ def check_vehicle_available(vehicle_id: str, scenario: str, fleet_status: Dict[s
     )
 
 def check_depot_alignment(vehicle_depot: str, order_depots: List[str]) -> RuleResult:
+    """
+    Ensures that all assigned orders originate from the vehicle home base depot.
+    """
     unique_depots = set(order_depots)
     passed = len(unique_depots) <= 1 and (len(unique_depots) == 0 or list(unique_depots)[0] == vehicle_depot)
     msg = "Trip orders match vehicle base depot" if passed else f"Vehicle based at {vehicle_depot} but assigned orders for {list(unique_depots)}"
@@ -37,6 +51,9 @@ def check_depot_alignment(vehicle_depot: str, order_depots: List[str]) -> RuleRe
     )
 
 def check_cold_chain(vehicle_temp: str, temp_requirements: List[str]) -> RuleResult:
+    """
+    Ensures that chilled or frozen orders are dispatched exclusively on refrigerated reefer units.
+    """
     has_cold = any(t in ["chilled", "frozen"] for t in temp_requirements)
     passed = not has_cold or vehicle_temp == "reefer"
     msg = "Cold chain integrity preserved" if passed else "Carries refrigerated orders on non refrigerated vehicle"
@@ -49,6 +66,9 @@ def check_cold_chain(vehicle_temp: str, temp_requirements: List[str]) -> RuleRes
     )
 
 def check_parking_access(vehicle_type: str, parking_constraints: List[str]) -> RuleResult:
+    """
+    Verifies that van only restricted retail outlets are not assigned heavy rigid trucks.
+    """
     has_van_only = any(p == "van_only" for p in parking_constraints)
     passed = not has_van_only or vehicle_type == "van"
     msg = "Vehicle size matches outlet access" if passed else f"Sends {vehicle_type} to van only outlet"
@@ -61,6 +81,9 @@ def check_parking_access(vehicle_type: str, parking_constraints: List[str]) -> R
     )
 
 def check_volume_capacity(total_volume_m3: float, volume_cap_m3: float) -> RuleResult:
+    """
+    Validates that total order cubic meter volume does not breach vehicle volume capacity.
+    """
     passed = total_volume_m3 <= volume_cap_m3 + 0.000001
     msg = "Volume within vehicle capacity" if passed else f"Volume {total_volume_m3:.1f} m3 exceeds capacity {volume_cap_m3:.1f} m3"
     return RuleResult(
@@ -72,6 +95,9 @@ def check_volume_capacity(total_volume_m3: float, volume_cap_m3: float) -> RuleR
     )
 
 def check_weight_capacity(total_weight_kg: float, weight_cap_kg: float) -> RuleResult:
+    """
+    Validates that total order payload weight in kg does not breach vehicle weight rating.
+    """
     passed = total_weight_kg <= weight_cap_kg + 0.000001
     msg = "Payload weight within vehicle capacity" if passed else f"Weight {total_weight_kg:.0f} kg exceeds capacity {weight_cap_kg:.0f} kg"
     return RuleResult(

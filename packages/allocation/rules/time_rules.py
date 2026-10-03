@@ -1,4 +1,9 @@
-from typing import List, Dict, Tuple, Any
+"""
+Waypoint Feasibility Engine Time Rules
+Calculates transit duration and enforces operational time budget constraints.
+"""
+
+from typing import List, Dict, Tuple
 from .types import RuleResult
 
 TRIP_BUDGET_PREDAWN_MIN = 270.0
@@ -11,6 +16,9 @@ def compute_trip_duration(
     district_travel_map: Dict[str, Dict[str, float]],
     service_allowance_map: Dict[Tuple[str, str], float]
 ) -> float:
+    """
+    Computes total trip time including travel and dock unloading service allowances.
+    """
     n_stops = len(dock_types)
     if n_stops == 0:
         return 0.0
@@ -27,6 +35,9 @@ def compute_trip_duration(
     return depot_to_district + (n_stops - 1) * inter_stop + total_service
 
 def check_time_budget(brand: str, total_duration_min: float) -> RuleResult:
+    """
+    Validates total trip duration against operational time budget constraints.
+    """
     max_budget = TRIP_BUDGET_PREDAWN_MIN if brand == "Fresh" else TRIP_BUDGET_DAYTIME_MIN
     window_name = "Pre dawn 03:30 to 08:00 window" if brand == "Fresh" else "Daytime window"
     passed = total_duration_min <= max_budget + 0.000001
