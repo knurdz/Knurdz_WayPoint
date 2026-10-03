@@ -5,6 +5,7 @@ import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 import CopilotModal from '../copilot/CopilotModal';
 import { useCopilot } from '../../hooks/useCopilot';
+import { ToastProvider } from '../ui/Toast';
 
 interface AppShellProps {
   role?: 'dispatcher' | 'loader' | 'driver' | 'store';
@@ -22,20 +23,22 @@ export default function AppShell({
   const { isOpen, openCopilot, closeCopilot } = useCopilot();
 
   return (
-    <div className="wp-app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <TopBar role={role} userName={userName} depot={depot} onOpenSearch={openCopilot} />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Sidebar role={role} />
-        <main style={{
-          flex: 1,
-          overflowY: 'auto',
-          background: 'var(--wp-canvas, #F5F5F3)',
-          padding: 24,
-        }}>
-          {children}
-        </main>
+    <ToastProvider>
+      <div className="wp-app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <TopBar role={role} userName={userName} depot={depot} onOpenSearch={openCopilot} />
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <Sidebar role={role} />
+          <main style={{
+            flex: 1,
+            overflowY: 'auto',
+            background: 'var(--wp-canvas, #F5F5F3)',
+            padding: 24,
+          }}>
+            {children}
+          </main>
+        </div>
+        <CopilotModal isOpen={isOpen} onClose={closeCopilot} />
       </div>
-      <CopilotModal isOpen={isOpen} onClose={closeCopilot} />
-    </div>
+    </ToastProvider>
   );
 }

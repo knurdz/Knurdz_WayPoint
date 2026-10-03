@@ -245,8 +245,23 @@ export default function StoreOrdersPage() {
               ))}
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: '32px 16px', textAlign: 'center', color: '#64748B' }}>
-                    No matching orders found.
+                  <td colSpan={6} style={{ padding: '48px 16px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 24, background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                        <Filter size={24} />
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>No matching orders in registry</div>
+                      <p style={{ margin: 0, fontSize: 13, color: '#64748B', maxWidth: 320 }}>
+                        Try clearing search terms or selecting a different status filter tab.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setFilter('All'); setSearch(''); }}
+                        style={{ marginTop: 8, padding: '6px 14px', borderRadius: 6, border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#377A8B', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Reset filters
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )}
