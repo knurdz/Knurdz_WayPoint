@@ -16,6 +16,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   redis:
     image: redis:7.4-alpine
@@ -31,6 +36,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   optimizer:
     build:
@@ -50,6 +60,11 @@ services:
       retries: 3
     depends_on:
       - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   web:
     build:
@@ -75,6 +90,11 @@ services:
         condition: service_healthy
       optimizer:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1024M
 
   caddy:
     image: caddy:2.8-alpine
@@ -89,6 +109,11 @@ services:
       - caddy_config:/config
     depends_on:
       - web
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
 volumes:
   pg_data:
