@@ -46,7 +46,7 @@ export default function TopBar({
       top: 0,
       zIndex: 40,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 240 }}>
         <a href={`/${role}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <img src="/assets/logo-mark.svg" alt="Waypoint" width={32} height={32} />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
