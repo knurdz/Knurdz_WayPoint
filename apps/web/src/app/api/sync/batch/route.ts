@@ -1,9 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@waypoint/database";
 import { resolveSyncConflict, ClientRecord, ServerRecord } from "@/lib/conflict_resolver";
+import { getAuthFromRequest } from "@/lib/auth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const auth = await getAuthFromRequest(req);
+    const callerId = auth?.userId || auth?.email || "ANONYMOUS_SYNC_CALLER";
     const body = await req.json();
     const { pods = [], tempReadings = [], issues = [] } = body;
 
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
 
     const auditEntry = await prisma.auditLog.create({
       data: {
-        userId: "DRV_KAMAL",
+        userId: callerId,
         action: "SYNC_BATCH_RECONCILE",
         details: JSON.stringify({
           receivedPodsCount: pods.length,
