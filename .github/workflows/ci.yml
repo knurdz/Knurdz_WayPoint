@@ -2,9 +2,9 @@ name: Waypoint Enterprise CI Pipeline
 
 on:
   push:
-    branches: [ main, ops/deploy, refactor/*, feat/* ]
+    branches: [ main, dev, ops/deploy, refactor/*, feat/*, fix/* ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
   python_tests:
