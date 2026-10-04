@@ -57,4 +57,27 @@ export const GLOBAL_INCIDENTS: ExceptionIncident[] = [
 
 export function addIncident(incident: ExceptionIncident) {
   GLOBAL_INCIDENTS.unshift(incident);
+  try {
+    // Dynamically ingest into active operational RAG engine
+    const { ingestDocument } = require('./rag_engine');
+    ingestDocument({
+      id: incident.code,
+      title: incident.title,
+      category: 'Incident',
+      content: `Live Exception ${incident.code}: ${incident.title}. Severity: ${incident.severity}. Vehicle: ${incident.vehicleId}. Route: ${incident.routeId}. Outlet: ${incident.outletId}. Description: ${incident.description}. Status: ${incident.status}. Timestamp: ${incident.timestamp}`,
+      summary: incident.description,
+      actionUrl: '/dispatcher/exceptions',
+      keywords: [
+        incident.code.toLowerCase(),
+        incident.type,
+        incident.severity,
+        incident.vehicleId.toLowerCase(),
+        incident.outletId.toLowerCase(),
+        'incident',
+      ],
+      timestamp: incident.timestamp,
+    });
+  } catch {
+    // Ingestion fallback
+  }
 }

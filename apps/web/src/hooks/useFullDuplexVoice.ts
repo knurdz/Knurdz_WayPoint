@@ -32,15 +32,18 @@ interface WindowWithSpeech extends Window {
 }
 
 export type VoiceDuplexMode = 'full_duplex' | 'half_duplex';
+export type VoiceProvider = 'elevenlabs' | 'browser';
 
 export interface UseFullDuplexVoiceOptions {
   mode?: VoiceDuplexMode;
+  provider?: VoiceProvider;
   onUserTranscript?: (transcript: string) => void;
   onBargeIn?: () => void;
 }
 
 export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
   const [duplexMode, setDuplexMode] = useState<VoiceDuplexMode>(options.mode || 'full_duplex');
+  const [voiceProvider, setVoiceProvider] = useState<VoiceProvider>(options.provider || 'elevenlabs');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -54,6 +57,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const isSpeakingRef = useRef(false);
   const onTranscriptRef = useRef(options.onUserTranscript);
   const onBargeInRef = useRef(options.onBargeIn);
@@ -66,6 +70,22 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
   useEffect(() => {
     isSpeakingRef.current = isSpeaking;
   }, [isSpeaking]);
+
+  // Clean stop for audio element and speech synthesis
+  const stopAllPlayback = useCallback(() => {
+    if (audioElementRef.current) {
+      try {
+        audioElementRef.current.pause();
+        audioElementRef.current.currentTime = 0;
+      } catch {
+        // ignore
+      }
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+  }, []);
 
   // Initialize speech recognition and browser support
   useEffect(() => {
@@ -115,6 +135,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
 
     return () => {
       stopAudioAnalysis();
+      stopAllPlayback();
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -122,11 +143,8 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
           // ignore cleanup errors
         }
       }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
     };
-  }, []);
+  }, [stopAllPlayback]);
 
   // Web Audio API analyzer with acoustic echo cancellation
   const startAudioAnalysis = async () => {
@@ -180,10 +198,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
           if (isSpeakingRef.current && speakingCounter > 2) {
             // User interrupted the agent while speaking
             setIsInterrupted(true);
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-              window.speechSynthesis.cancel();
-            }
-            setIsSpeaking(false);
+            stopAllPlayback();
             if (onBargeInRef.current) {
               onBargeInRef.current();
             }
@@ -250,19 +265,13 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
         // ignore
       }
     }
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    stopAllPlayback();
     setIsListening(false);
-    setIsSpeaking(false);
-  }, []);
+  }, [stopAllPlayback]);
 
-  const speak = useCallback((text: string, onEnd?: () => void) => {
+  // Fallback vocalization via local browser neural speech synthesis
+  const speakWithBrowser = useCallback((plainText: string, onEnd?: () => void) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
-
-    // Remove markup and normalize spacing
-    const plainText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!plainText) return;
 
     window.speechSynthesis.cancel();
 
@@ -286,19 +295,71 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     window.speechSynthesis.speak(utterance);
   }, []);
 
-  const cancelSpeech = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    setIsSpeaking(false);
-  }, []);
+  // Main speak function supporting ElevenLabs streaming with automatic browser fallback
+  const speak = useCallback(
+    async (text: string, onEnd?: () => void) => {
+      // Clean markup and normalize whitespace
+      const plainText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!plainText) return;
+
+      stopAllPlayback();
+
+      if (voiceProvider === 'elevenlabs') {
+        try {
+          const res = await fetch('/api/agent/voice/synthesize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: plainText }),
+          });
+
+          const contentType = res.headers.get('content-type') || '';
+
+          if (contentType.includes('audio/mpeg')) {
+            const blob = await res.blob();
+            const audioUrl = URL.createObjectURL(blob);
+            const audio = new Audio(audioUrl);
+            audioElementRef.current = audio;
+
+            audio.onplay = () => {
+              setIsSpeaking(true);
+            };
+
+            audio.onended = () => {
+              setIsSpeaking(false);
+              URL.revokeObjectURL(audioUrl);
+              if (onEnd) onEnd();
+            };
+
+            audio.onerror = () => {
+              URL.revokeObjectURL(audioUrl);
+              speakWithBrowser(plainText, onEnd);
+            };
+
+            await audio.play();
+            return;
+          }
+        } catch {
+          // Seamless fallback on network or API failure
+        }
+      }
+
+      // Default browser neural vocalization fallback
+      speakWithBrowser(plainText, onEnd);
+    },
+    [voiceProvider, stopAllPlayback, speakWithBrowser]
+  );
 
   const toggleDuplexMode = useCallback(() => {
     setDuplexMode((prev) => (prev === 'full_duplex' ? 'half_duplex' : 'full_duplex'));
   }, []);
 
+  const toggleVoiceProvider = useCallback(() => {
+    setVoiceProvider((prev) => (prev === 'elevenlabs' ? 'browser' : 'elevenlabs'));
+  }, []);
+
   return {
     duplexMode,
+    voiceProvider,
     isListening,
     isSpeaking,
     isUserSpeaking,
@@ -309,8 +370,10 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     startSession,
     stopSession,
     speak,
-    cancelSpeech,
+    cancelSpeech: stopAllPlayback,
     toggleDuplexMode,
+    toggleVoiceProvider,
     setDuplexMode,
+    setVoiceProvider,
   };
 }

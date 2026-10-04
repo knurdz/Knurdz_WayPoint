@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { COPILOT_KNOWLEDGE_BASE } from '@/lib/copilot_kb';
 import { checkRateLimit } from '@/lib/rate_limiter';
 import { executeVoiceTool } from '@/lib/agent_tools';
+import { queryRAG } from '@/lib/rag_engine';
 
 interface ActionPayload {
   id: string;
@@ -162,6 +163,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
+    // Query dynamic operational RAG engine for citations and grounded context
+    const ragResult = queryRAG(query, 3);
+
     // Check real time voice telemetry tools first
     const voiceToolResult = executeVoiceTool(query);
     if (voiceToolResult.matched && voiceToolResult.spokenReply) {
@@ -170,6 +174,8 @@ export async function POST(req: Request) {
         action: voiceToolResult.action || null,
         telemetryData: voiceToolResult.telemetryData || null,
         toolName: voiceToolResult.toolName,
+        citations: ragResult.citations,
+        ragContext: ragResult.groundedContext,
       });
     }
 
@@ -179,60 +185,31 @@ export async function POST(req: Request) {
         return NextResponse.json({
           reply: item.reply,
           action: item.action || null,
+          citations: ragResult.citations,
+          ragContext: ragResult.groundedContext,
         });
       }
     }
 
-    // Fallback to knowledge base search
-    const lowerQuery = query.toLowerCase();
-    const queryTokens = lowerQuery.split(/\s+/).filter((t: string) => t.length > 2);
-
-    const matches = COPILOT_KNOWLEDGE_BASE.filter((item) => {
-      const itemTitleLower = item.title.toLowerCase();
-      const itemSummaryLower = item.summary.toLowerCase();
-      const itemDetailsLower = item.details.toLowerCase();
-
-      // Check if query contains any of the item keywords
-      if (item.keywords.some((k) => lowerQuery.includes(k.toLowerCase()))) {
-        return true;
-      }
-
-      // Check if query mentions rule ID or title
-      if (
-        itemTitleLower.includes(lowerQuery) ||
-        lowerQuery.includes(itemTitleLower) ||
-        itemSummaryLower.includes(lowerQuery) ||
-        itemDetailsLower.includes(lowerQuery)
-      ) {
-        return true;
-      }
-
-      // Check token match
-      const matchingTokens = queryTokens.filter(
-        (t: string) =>
-          itemTitleLower.includes(t) ||
-          itemSummaryLower.includes(t) ||
-          item.keywords.some((k) => k.toLowerCase().includes(t))
-      );
-      return matchingTokens.length >= 2;
-    });
-
-    if (matches.length > 0) {
-      const top = matches[0];
-      const actionPayload: ActionPayload | null = top.actionUrl
+    // Next check RAG match
+    if (ragResult.matched && ragResult.bestDocument) {
+      const best = ragResult.bestDocument;
+      const actionPayload: ActionPayload | null = best.actionUrl
         ? {
-            id: top.id,
-            label: top.title,
-            href: top.actionUrl,
-            description: top.summary,
-            status: `Opened ${top.title}`,
+            id: best.id,
+            label: best.title,
+            href: best.actionUrl,
+            description: best.summary,
+            status: `Opened ${best.title}`,
           }
         : null;
 
       return NextResponse.json({
-        reply: `${top.title}: ${top.details}`,
+        reply: `${best.title}. ${best.summary}`,
         action: actionPayload,
-        category: top.category,
+        category: best.category,
+        citations: ragResult.citations,
+        ragContext: ragResult.groundedContext,
       });
     }
 
