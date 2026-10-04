@@ -159,6 +159,11 @@ async function main() {
     { email: 'priya.fernando@waypoint.lk', name: 'Priya Fernando', role: Role.loader },
     { email: 'kamal.silva@waypoint.lk', name: 'Kamal Silva', role: Role.driver },
     { email: 'anjali.jayawardena@waypoint.lk', name: 'Anjali Jayawardena', role: Role.store, outletId: 'OUT001' },
+    // Also support submission knurdz.org domain emails
+    { email: 'dispatcher@waypoint.knurdz.org', name: 'Nimal Perera', role: Role.dispatcher },
+    { email: 'loader@waypoint.knurdz.org', name: 'Priya Fernando', role: Role.loader },
+    { email: 'driver@waypoint.knurdz.org', name: 'Kamal Silva', role: Role.driver },
+    { email: 'store@waypoint.knurdz.org', name: 'Anjali Jayawardena', role: Role.store, outletId: 'OUT001' },
   ];
 
   for (const user of demoUsers) {
