@@ -14,7 +14,7 @@ export default function StoreDeferralPage() {
           ORD009801 not on tomorrow run
         </h1>
         <p className="wp-subtext">
-          <strong className="font-mono">REEFER_CAPACITY</strong>, refrigerated compartment unavailable for your chilled volume.
+          <strong>Reefer Capacity Shortage</strong>: Refrigerated compartment unavailable for your chilled volume.
         </p>
 
         <div
@@ -29,7 +29,7 @@ export default function StoreDeferralPage() {
             textAlign: "left",
           }}
         >
-          Second consecutive deferral · last run also <strong className="font-mono">REEFER_CAPACITY</strong>. Supervisor override applied.
+          Second consecutive deferral (last run: <strong>Reefer Capacity Shortage</strong>). Supervisor override applied.
         </div>
 
         <p style={{ marginTop: "1.25rem", fontSize: "1rem" }}>
