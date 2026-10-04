@@ -55,5 +55,11 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter @waypoint/database run db:generate
 
+      - name: Run ESLint
+        run: pnpm --filter @waypoint/web run lint
+
+      - name: Run TypeScript typecheck
+        run: pnpm --filter @waypoint/web run typecheck
+
       - name: Build Next.js Production App
         run: pnpm --filter @waypoint/web run build
