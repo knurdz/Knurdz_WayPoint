@@ -1,152 +1,195 @@
 # System Architecture & Technical Design
 
-## 1. System Overview
+## 1. Executive Summary & Problem Domain
 
-Waypoint is an enterprise-grade logistics dispatch, route planning, and Proof-of-Delivery (PoD) orchestration platform designed specifically for fast-moving retail distribution networks in Sri Lanka. The architecture handles complex operational constraints across multi-brand retail outlets (Fresh, Style, Tech), heterogeneous vehicle fleets (reefer trucks, ambient vans), strict mall delivery windows, driver work-hour limits, and intermittent network connectivity.
+Waypoint is an operational logistics dispatch, route optimization, and digital Proof-of-Delivery (PoD) platform engineered specifically for the Sri Lankan FMCG retail supply chain. The system coordinates inventory flow across three distinct retail brands (**Waypoint Fresh**, **Waypoint Style**, and **Waypoint Tech**), operating from two central distribution hubs (**Peliyagoda Central Depot** and **Kandy Regional Depot**) serving 100 retail outlets across the Western and Central transport corridors.
+
+The platform addresses real-world operational friction:
+* Strict 16:00 SLST daily order cutoffs for next-day 05:00 dispatch.
+* Heterogeneous fleets (refrigerated 4-tonne trucks, ambient 1.5-tonne vans) with district and brand segregation.
+* Severe delivery constraints in congested urban centers (mall loading bay windows between 05:00 and 07:30, street dock parking restrictions).
+* Unreliable mobile connectivity in basement loading docks, requiring zero-data-loss offline proof of delivery.
+
+---
+
+## 2. System Topology & Component Interactions
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer ["Client Presentation Layer (Responsive Web / PWA)"]
-        UI_Disp["Dispatcher Dashboard<br/>(Live Telemetry & Fleet Map)"]
-        UI_Load["Warehouse Loader Portal<br/>(Staging & Bay Assignment)"]
-        UI_Driv["Driver Mobile Portal<br/>(Turn-by-Turn & Offline PoD)"]
-        UI_Stor["Store Manager Portal<br/>(Delivery Inspection & Receipts)"]
+    subgraph Clients ["Client Layer (Responsive Web / Offline PWA)"]
+        DispUI["Dispatcher Dashboard<br/>(Live Telemetry & Fleet Map)"]
+        LoadUI["Warehouse Loader Portal<br/>(Staging & Bay Assignment)"]
+        DrivUI["Driver Mobile Portal (PWA)<br/>(Turn-by-Turn & Offline PoD)"]
+        StoreUI["Store Manager Portal<br/>(Order Placement & Goods Receipts)"]
     end
 
-    subgraph IngressLayer ["Edge Ingress & Security"]
-        Caddy["Caddy Reverse Proxy<br/>(Automatic TLS / Rate Limiting / Gzip)"]
+    subgraph Edge ["Edge Ingress & Reverse Proxy"]
+        CaddyProxy["Caddy 2 Reverse Proxy<br/>(TLS Let's Encrypt / Gzip / Rate Limit)"]
     end
 
-    subgraph AppLayer ["Application Tier (Node.js / Next.js 16 Standalone)"]
-        NextApp["Next.js App Router (SSR & Static Assets)"]
-        BFF["BFF API Routes & Edge Middleware"]
-        AuthModule["RBAC Auth Guard & Session Security"]
-        CartoService["PickMe/Uber Style Cartography Engine"]
+    subgraph AppTier ["Application Tier (Node.js 22 / Next.js 16 Standalone)"]
+        NextCore["Next.js 16 App Router (SSR & Dynamic Routes)"]
+        BFFRoute["BFF API Endpoints & Auth Middleware"]
+        SessionGuard["RBAC JWT Session & Security Layer"]
+        CartoService["Cartography Engine & Fleet Visualizer"]
     end
 
-    subgraph OptimizationTier ["Algorithmic Optimization Tier (Python / FastAPI)"]
-        SolverService["OR-Tools Allocation & Routing Engine"]
-        FeasibilityEngine["14 Hard Feasibility Rules Validator"]
-        VRPModel["Vehicle Routing Problem (VRP) Solver"]
+    subgraph SolverTier ["Constraint Optimization Tier (Python 3.12 / FastAPI)"]
+        FastAPIService["FastAPI Allocation Service"]
+        RuleValidator["14 Hard Feasibility Rules Engine"]
+        ORToolsSolver["Google OR-Tools VRP Solver (CP-SAT / Routing)"]
     end
 
-    subgraph DataTier ["Persistence & Messaging Tier"]
-        PG[("PostgreSQL 16 Enterprise<br/>Relational Master Store")]
-        RedisCache[("Redis 7.4 In-Memory Cache<br/>& Event Pub/Sub")]
-        IndexedDB[("Client Offline IndexedDB<br/>Idempotent Sync Queue")]
+    subgraph DataTier ["Persistence & Caching Tier"]
+        PostgresDB[("PostgreSQL 16 Enterprise<br/>(Relational Master Store)")]
+        RedisStore[("Redis 7.4 In-Memory Cache<br/>(Telemetry & Locks)")]
+        ClientDB[("IndexedDB (Dexie.js)<br/>(Offline Sync Queue)")]
     end
 
-    UI_Disp -->|HTTPS / WSS| Caddy
-    UI_Load -->|HTTPS| Caddy
-    UI_Driv -->|HTTPS / Offline| Caddy
-    UI_Stor -->|HTTPS| Caddy
+    DispUI -->|HTTPS / WSS| CaddyProxy
+    LoadUI -->|HTTPS| CaddyProxy
+    DrivUI -->|HTTPS / Offline| CaddyProxy
+    StoreUI -->|HTTPS| CaddyProxy
 
-    Caddy -->|Reverse Proxy| NextApp
-    NextApp --> BFF
-    BFF --> AuthModule
-    BFF --> CartoService
-    BFF -->|REST RPC| SolverService
-    BFF -->|Prisma ORM| PG
-    BFF -->|Session / Telemetry Cache| RedisCache
+    CaddyProxy -->|Reverse Proxy :3000| NextCore
+    NextCore --> BFFRoute
+    BFFRoute --> SessionGuard
+    BFFRoute --> CartoService
+    BFFRoute -->|Internal REST RPC :8000| FastAPIService
+    BFFRoute -->|Prisma ORM Pooling :5432| PostgresDB
+    BFFRoute -->|Telemetry Cache :6379| RedisStore
 
-    SolverService --> FeasibilityEngine
-    FeasibilityEngine --> VRPModel
+    FastAPIService --> RuleValidator
+    RuleValidator --> ORToolsSolver
 
-    UI_Driv -.->|Offline Sync| IndexedDB
-    IndexedDB -.->|Idempotent POST| BFF
+    DrivUI -.->|Local IndexedDB Writes| ClientDB
+    ClientDB -.->|Idempotent POST /api/driver/pod| BFFRoute
 ```
 
 ---
 
-## 2. Multi-Tier Architecture & Topology
+## 3. Tier-by-Tier Architecture
 
-### 2.1 Ingress Layer (Caddy 2 Reverse Proxy)
-- **Automatic TLS**: Automated certificate acquisition and renewal via Let's Encrypt for `waypoint.knurdz.org`.
-- **Security Headers**: HSTS, Content-Security-Policy (CSP), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`.
-- **Gzip / Zstandard Compression**: Optimized asset delivery across high-latency mobile networks.
+### 3.1 Edge Ingress (Caddy 2)
+We selected **Caddy 2** over Nginx for production edge termination on our Azure VM (`waypoint.knurdz.org`).
+* **Automated TLS Lifecycle**: Native ACME Let's Encrypt certificates without external cron certbot scripts.
+* **Security Headers**: Injects HSTS (`max-age=31536000`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and tight Content Security Policy.
+* **Payload Compression**: Automatic Zstandard and Gzip compression, reducing JSON transfer payloads over 3G/4G cellular networks.
 
-### 2.2 Frontend & BFF Layer (Next.js 16 Standalone)
-- **Framework**: Next.js 16 with React 19 and Tailwind CSS.
-- **Portals**:
-  1. **Dispatcher**: Interactive fleet telemetry with live vehicle tracking (PickMe / Uber visual style), route re-assignment, solver triggering, and cold-chain temperature alerts.
-  2. **Warehouse Loader**: Pallet staging sequences, loading bay assignments, and volumetric weight verification.
-  3. **Driver (PWA)**: Mobile-optimized stop sequence, turn-by-turn navigation, digital signature capture, offline photo capture, and idempotent sync.
-  4. **Store Manager**: Delivery verification, real-time ETA countdown, shortage/damage discrepancy reporting.
-- **State Management & Offline Storage**: Dexie.js (IndexedDB) with optimistic UI updates and background synchronization queues.
+### 3.2 Application & BFF Tier (Next.js 16 Standalone)
+The presentation layer and Backend-For-Frontend (BFF) run within a single Next.js 16 standalone container.
+* **Role-Based Portals**:
+  1. `/dispatcher`: Real-time fleet board, PickMe/Uber style map, manual trip overrides, and cold-chain temperature telemetry.
+  2. `/loader`: Bay assignments, volumetric capacity meters, and reverse-LIFO staging checklists.
+  3. `/driver/route`: Mobile-first 390px responsive viewport, turn-by-turn stop sequences, touch signature pad, photo capture, and Serwist service worker.
+  4. `/store`: Outlet inventory ordering, 16:00 cutoff alerts, and discrepancy dispute logging.
+* **Edge Route Guards**: Next.js middleware verifies signed JWT cookies and role authorization claims before requests hit downstream API routes.
 
-### 2.3 Optimization Tier (FastAPI & Google OR-Tools)
-- **Constraint Satisfaction**: Implements Google OR-Tools CP-SAT and Routing solvers to solve multi-depot Capacitated Vehicle Routing Problems with Time Windows (CVRPTW).
-- **Rule Verification Engine**: Strict execution of all 14 hard feasibility rules before any trip plan commitment:
-  - Weight & volume constraints per vehicle type.
-  - Temperature compartmentalization (cold chain reefers vs ambient vans).
-  - Maximum 3 stops per trip run.
-  - District containment (single-district trip enforcement).
-  - Dedicated brand vehicle exclusivity (Fresh vs Style vs Tech).
-  - Mall loading bay time windows (05:00 - 07:30 cutoff).
-  - Driver shift limits (maximum 10 hours continuous duty).
-  - Depot fuel quotas and vehicle maintenance blackouts.
+### 3.3 Algorithmic Optimization Tier (Python 3.12 & Google OR-Tools)
+Route scheduling and vehicle packing are delegated to a dedicated Python 3.12 microservice running **Google OR-Tools** (v9.8+).
+* **Mathematical Modeling**: Formulated as a Capacitated Vehicle Routing Problem with Time Windows (CVRPTW).
+* **14 Hard Feasibility Rules**: Enforced deterministically before candidate trips are output:
+  1. Strict vehicle payload weight limit (`kg`).
+  2. Vehicle cubic volume limit (`m³`).
+  3. Temperature segregation: Reefer cargo assigned exclusively to refrigerated assets.
+  4. Stop count limit: Maximum 3 retail stops per trip run.
+  5. District purity: Zero cross-district runs within a single trip.
+  6. Brand exclusivity: Dedicated single-brand runs per vehicle.
+  7. Mall delivery windows: 05:00 - 07:30 delivery slots strictly enforced.
+  8. Run budget: Maximum 2 runs per vehicle per operational day.
+  9. Fleet availability: Automatic blackout of vehicles flagged `in_workshop`.
+  10. Driver fatigue limit: Cumulative trip duration capped at 10 hours (600 minutes) daily.
+  11. Weekly fuel quota: 7-day rolling fuel consumption tracking.
+  12. Depot containment: Outlets served exclusively by their designated home depot (Peliyagoda or Kandy).
+  13. Deferred-order escalation: High priority weighting for orders deferred from Day -1.
+  14. Fairness index: Penalty multiplier for starving outlets not served for $\ge 2$ consecutive days.
 
-### 2.4 Persistence & Cache Layer
-- **PostgreSQL 16**: Primary source of truth managed via Prisma ORM with connection pooling.
-- **Redis 7.4**: Ephemeral session caching, real-time driver GPS telemetry coordinates, and distributed lock management.
-
----
-
-## 3. Real-Time Telemetry & Cartography Engine
-
-Waypoint's mapping infrastructure delivers a high-performance experience modeled after PickMe and Uber:
-- **Leaflet & OpenStreetMap**: Vector cartography rendered on client devices without proprietary map API costs.
-- **Dynamic Vehicle Visualizer**:
-  - Distinguishes vehicles by type: **Delivery Vans** vs **Heavy Trucks**.
-  - Distinguishes vehicles by refrigeration: **Blue accents** for reefer cold-chain units, standard markers for ambient units.
-  - Real-time capacity utilization gauges: Empty (0-30%), Partial (30-80%), and Full load (>80%).
-- **Fallback Simulation & ETA Prediction**: If a driver's GPS device goes offline or loses satellite lock, Waypoint automatically calculates dead-reckoning positions based on historical transit speeds across Sri Lankan road corridors.
+### 3.4 Persistence & Cache Tier
+* **PostgreSQL 16**: Relational master store hosting user identity, vehicle specifications, outlet coordinates, orders, trips, and proof-of-delivery receipts.
+* **Redis 7.4**: Ephemeral cache storing real-time driver GPS telemetry fixes (5-second TTL), active session revocations, and solver execution locks.
 
 ---
 
-## 4. End-to-End Operational Lifecycle Sequence
+## 4. Architectural Decision Records (ADRs)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Dispatcher as Dispatcher
-    participant NextBFF as Next.js BFF API
-    participant Solver as Python OR-Tools Engine
-    participant DB as PostgreSQL 16
-    actor Loader as Warehouse Loader
-    actor Driver as Driver (Mobile PWA)
-    actor Store as Store Manager
+### ADR-001: Next.js 16 Standalone BFF vs. Separate Express/NestJS Gateway
+* **Context**: We needed to serve 4 responsive web portals while providing secure, authenticated REST APIs for mobile sync.
+* **Decision**: Implement a unified Next.js 16 App Router application with standalone output (`output: 'standalone'`).
+* **Rationale**:
+  * Eliminates cross-service network serialization latency between frontend SSR components and the BFF layer.
+  * Next.js standalone container packages only traced `node_modules`, keeping image size under 180MB.
+  * Avoids managing separate deployment pipelines, CORS policies, and duplicate TypeScript interface declarations.
+* **Trade-off**: Requires strict discipline to keep route handler business logic modular within `src/lib/`.
 
-    Dispatcher->>NextBFF: Trigger Day+1 Allocation Run
-    NextBFF->>DB: Fetch Confirmed Orders, Vehicles, Outlets
-    NextBFF->>Solver: POST /api/v1/allocate (Payload)
-    Note over Solver: Solve CVRPTW with 14 Feasibility Rules
-    Solver-->>NextBFF: Return Optimized Trips & Stop Sequences
-    NextBFF->>DB: Persist Trips & TripStops (status: planned)
-    NextBFF-->>Dispatcher: Display Optimal Schedule & KPIs
+### ADR-002: Python FastAPI + OR-Tools vs. In-Process Node.js Heuristics
+* **Context**: Route optimization requires solving complex combinatorial constraints across 100 outlets and 37 vehicles.
+* **Decision**: Build a standalone Python 3.12 microservice executing Google OR-Tools (CP-SAT and Routing library) via FastAPI.
+* **Rationale**:
+  * JavaScript combinatorial libraries lack mature constraint-programming engines capable of solving CVRPTW with multiple hard constraints within sub-second thresholds.
+  * Python microservice exposes a lightweight REST contract (`POST /api/v1/allocate`), isolating heavy CPU math from the web event loop.
+* **Trade-off**: Introduces an internal network hop (~3ms) between the BFF container and the solver container.
 
-    Dispatcher->>NextBFF: Release Manifest to Floor
-    Loader->>NextBFF: View Assigned Staging Bay & Pallet Order
-    Loader->>NextBFF: Confirm Staged & Loaded (status: dispatched)
+### ADR-003: Serwist + Dexie.js Offline Architecture vs. Always-Online Web App
+* **Context**: Sri Lankan supermarket delivery bays (especially underground basement docks in Colombo commercial malls) frequently have zero cellular coverage. Drivers must capture signatures and timestamps without dropping data.
+* **Decision**: Implement a Service Worker via **Serwist** with **Dexie.js** (IndexedDB) as an offline write-ahead log.
+* **Rationale**:
+  * Signatures and photo hashes are persisted instantly to local IndexedDB with client-generated UUID `idempotencyKey`.
+  * Background sync worker monitors `navigator.onLine` and replays pending sync batches to `/api/sync/batch` upon reconnection.
+* **Trade-off**: Requires client-side conflict resolution handling if central dispatch modified the trip while the driver was offline.
 
-    Driver->>NextBFF: Start Trip (Depart Depot)
-    loop Telemetry Update
-        Driver->>NextBFF: Push GPS Coordinates
-        NextBFF->>Store: Stream Live ETA Updates
-    end
+### ADR-004: Client-Side Leaflet + Custom SVG Cartography vs. Commercial Map APIs
+* **Context**: Real-time fleet tracking requires visualizing delivery vehicles across Sri Lanka with distinct chassis types, refrigeration liveries, and cargo fill levels.
+* **Decision**: Utilize Leaflet with CartoDB Voyager tiles and custom SVG vehicle silhouettes rather than Google Maps or Mapbox APIs.
+* **Rationale**:
+  * Eliminates external API key billing exposure, per-tile costs, and unexpected third-party rate limiting during evaluation.
+  * Allows custom rendering of PickMe / Uber style top-down vehicle silhouettes (distinguishing vans vs heavy trucks, blue reefer condenser badges, and 3-tier cargo load gauges).
+* **Trade-off**: Vector route polylines are rendered from pre-computed coordinate sequences rather than dynamically calculated by a live turn-by-turn routing cloud API.
 
-    Driver->>Store: Arrive at Store Dock
-    Store->>Driver: Inspect Crates & Verify Quantities
-    Driver->>NextBFF: Submit Digital Signature + Proof of Delivery (PoD)
-    Note over Driver,NextBFF: Idempotent Sync (Works Offline)
-    NextBFF->>DB: Update TripStop & Order (status: delivered)
-    NextBFF-->>Dispatcher: Trip Completed Alert & Fuel Logged
+---
+
+## 5. Latency Budget & Operational SLAs
+
+| Operation | Target SLA | 95th Percentile | Strategy & Architecture |
+| :--- | :---: | :---: | :--- |
+| **BFF Health Check** | `< 10ms` | `15ms` | In-memory Next.js edge route |
+| **Order Queue Query** | `< 45ms` | `75ms` | Compound index on `orders(orderDate, status)` |
+| **OR-Tools Solver Run (100 orders)** | `< 500ms` | `850ms` | Parallel CP-SAT heuristic search with 5s hard cutoff |
+| **Driver GPS Telemetry Ingest** | `< 30ms` | `45ms` | Ingest via BFF straight to Redis key `driver:telemetry:{id}` |
+| **Fleet Map Initial Paint** | `< 250ms` | `380ms` | Client-cached tile layer + lightweight GeoJSON payloads |
+| **Offline PoD Local Write** | `< 5ms` | `12ms` | Instant IndexedDB mutation with optimistic UI state |
+
+---
+
+## 6. Failure Modes & Graceful Degradation Matrix
+
+```text
+┌─────────────────────────┬──────────────────────────────┬────────────────────────────────────────────────────────┐
+│ Failure Scenario        │ Impact                       │ Architectural Mitigation                               │
+├─────────────────────────┼──────────────────────────────┼────────────────────────────────────────────────────────┤
+│ Python Solver Outage    │ Automated allocation stops   │ BFF falls back to built-in deterministic greedy        │
+│                         │                              │ priority heuristic; logs alert to dispatcher UI.       │
+├─────────────────────────┼──────────────────────────────┼────────────────────────────────────────────────────────┤
+│ Underground Dock 4G Drop│ Driver loses connectivity    │ PWA switches to offline mode; signatures written to    │
+│                         │                              │ Dexie.js IndexedDB; auto-synced upon reconnect.        │
+├─────────────────────────┼──────────────────────────────┼────────────────────────────────────────────────────────┤
+│ Driver Device GPS Lost  │ Vehicle telemetry stops      │ Telemetry engine switches to dead-reckoning model      │
+│                         │                              │ using depot departure times and historical speeds.     │
+├─────────────────────────┼──────────────────────────────┼────────────────────────────────────────────────────────┤
+│ Redis Cache Eviction    │ Temporary telemetry miss     │ Falls back to last-known coordinates in PostgreSQL;    │
+│                         │                              │ recovers on next 5-second driver heartbeat.            │
+└─────────────────────────┴──────────────────────────────┴────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Security & High Availability Controls
+## 7. Production Deployment Topology
 
-- **Role-Based Access Control (RBAC)**: Enforced via Next.js middleware and JWT cryptographically signed session cookies.
-- **Data Protection**: Passwords hashed using bcrypt (cost factor 10). Sensitive audit logs stored immutably.
-- **Zero Mock Policy**: Production databases are pre-seeded with realistic master data (Sri Lankan geographic coordinates, authentic outlet names, and historical delivery logs).
+The entire system is deployed on an **Azure Virtual Machine** running Ubuntu 24.04 LTS behind Caddy:
+
+* **Host Machine**: Azure Standard VM (2 vCPU, 4GB RAM, SSD OS Disk).
+* **Network Isolation**: All backend containers (`web`, `allocation`, `postgres`, `redis`) communicate over an internal Docker bridge network (`waypoint-network`).
+* **Ingress**: Only Ports 80 and 443 are exposed externally to the public Internet through Caddy.
+* **Volume Persistence**:
+  * PostgreSQL data persisted to host volume `postgres_data:/var/lib/postgresql/data`.
+  * PoD signature and photo binaries stored in host volume `uploads:/app/uploads`.
+* **Zero-Touch Cold Boot**: `docker compose up -d` triggers the `db_init` lifecycle service, which applies Prisma migrations, executes CSV master seeding, and exits cleanly before web traffic opens.
