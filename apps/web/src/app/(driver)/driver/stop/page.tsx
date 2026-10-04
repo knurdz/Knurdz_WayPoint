@@ -71,7 +71,7 @@ export default function DriverStopPage() {
 
           <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8, fontSize: 14, color: '#334155' }}>
             <li>
-              <strong>Physical constraint:</strong> van_only · curb unload · 3.2 m clearance
+              <strong>Physical constraint:</strong> Van Only · curb unload · 3.2 m clearance
             </li>
             <li>
               <strong>Delivery window:</strong> 05:00 to 07:30 SLST (strict morning curfew)

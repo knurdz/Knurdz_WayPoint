@@ -181,9 +181,9 @@ export default function OrderQueueTable({ initialOrders }: OrderQueueTableProps)
           }}
         >
           <option value="">All Access Constraints</option>
-          <option value="van_only">van_only (Van Exclusive)</option>
-          <option value="mall_dock">mall_dock (Dock Bay)</option>
-          <option value="normal">Normal</option>
+          <option value="van_only">Van Only (Curbside Exclusive)</option>
+          <option value="mall_dock">Mall Dock (Loading Bay)</option>
+          <option value="normal">Standard Access</option>
         </select>
       </div>
 
@@ -343,7 +343,7 @@ export default function OrderQueueTable({ initialOrders }: OrderQueueTableProps)
                           fontSize: 11,
                         }}>
                           <Truck size={11} />
-                          van only
+                          Van Only
                         </span>
                       )}
                       {order.parkingConstraint === 'mall_dock' && (
@@ -359,7 +359,7 @@ export default function OrderQueueTable({ initialOrders }: OrderQueueTableProps)
                           fontSize: 11,
                         }}>
                           <Building2 size={11} />
-                          mall bay
+                          Mall Dock
                         </span>
                       )}
                     </div>

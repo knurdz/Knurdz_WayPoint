@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatDeferralReason } from "@/lib/formatters";
 
 interface StagedDeferral {
   id: string;
@@ -157,7 +158,7 @@ export default function DispatcherDeferralPage() {
                 </div>
                 {order.deferredLastRun && (
                   <span className="decision-debt-chip mc-status-chip mc-status-chip-warn" style={{ alignSelf: "flex-start", fontSize: "0.7rem" }}>
-                    Deferred last run · {order.lastReason}
+                    Deferred last run · {formatDeferralReason(order.lastReason)}
                   </span>
                 )}
               </div>
@@ -179,12 +180,12 @@ export default function DispatcherDeferralPage() {
                 onChange={(e) => setReasonCode(e.target.value)}
                 style={{ width: "100%", padding: "0.5rem" }}
               >
-                <option value="REEFER_CAPACITY">REEFER_CAPACITY</option>
-                <option value="VAN_ONLY">VAN_ONLY</option>
-                <option value="WEIGHT_VOLUME">WEIGHT_VOLUME</option>
-                <option value="TIME_BUDGET">TIME_BUDGET</option>
-                <option value="FUEL_QUOTA">FUEL_QUOTA</option>
-                <option value="MALL_WINDOW">MALL_WINDOW</option>
+                <option value="REEFER_CAPACITY">Reefer Capacity Shortage</option>
+                <option value="VAN_ONLY">Van-Only Access Constraint</option>
+                <option value="WEIGHT_VOLUME">Weight & Volume Exceeded</option>
+                <option value="TIME_BUDGET">Time Budget Violation</option>
+                <option value="FUEL_QUOTA">Fuel Quota Exceeded</option>
+                <option value="MALL_WINDOW">Mall Delivery Window Missed</option>
               </select>
             </div>
 
