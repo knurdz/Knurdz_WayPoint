@@ -9,7 +9,6 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: process.env.OUTPUT_STANDALONE === 'false' ? undefined : 'standalone',
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
