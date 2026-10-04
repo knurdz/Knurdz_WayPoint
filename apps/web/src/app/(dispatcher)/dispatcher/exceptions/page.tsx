@@ -29,20 +29,28 @@ export default function DispatcherExceptionsPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadIncidents() {
       try {
-        const res = await fetch("/api/dispatcher/exceptions");
+        const res = await fetch("/api/dispatcher/exceptions", { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setIncidents(data.incidents || []);
         }
-      } catch (err) {
-        console.error("Failed to load incidents", err);
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.error("Failed to load incidents", err);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     loadIncidents();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleResolve = async (incidentId: string, action: string) => {
