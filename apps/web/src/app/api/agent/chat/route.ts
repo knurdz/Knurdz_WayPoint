@@ -3,6 +3,7 @@ import { COPILOT_KNOWLEDGE_BASE } from '@/lib/copilot_kb';
 import { checkRateLimit } from '@/lib/rate_limiter';
 import { executeVoiceTool } from '@/lib/agent_tools';
 import { queryRAG } from '@/lib/rag_engine';
+import { agentChatSchema, validateRequestBody } from '@/lib/api_schemas';
 
 interface ActionPayload {
   id: string;
@@ -156,12 +157,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const query = (body.query || '').trim();
-
-    if (!query) {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    const validation = await validateRequestBody(req, agentChatSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+    const query = validation.data.query;
 
     // Query dynamic operational RAG engine for citations and grounded context
     const ragResult = queryRAG(query, 3);

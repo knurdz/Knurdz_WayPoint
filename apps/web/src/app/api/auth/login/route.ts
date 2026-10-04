@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signAuthToken, setAuthCookie, AuthPayload } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate_limiter';
+import { loginSchema, validateRequestBody } from '@/lib/api_schemas';
 
 const DEMO_ACCOUNTS: Record<
   string,
@@ -38,12 +39,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
-    const { email, password, remember = true } = body;
-
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    const validation = await validateRequestBody(req, loginSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { email, password, remember } = validation.data;
 
     const normalizedEmail = email.trim().toLowerCase();
     const demoUser = DEMO_ACCOUNTS[normalizedEmail];

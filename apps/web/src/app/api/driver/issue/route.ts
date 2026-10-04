@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@waypoint/database";
+import { driverIssueSchema, validateRequestBody } from "@/lib/api_schemas";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { issueType, notes, deliveryCode, stopId } = body;
+    const validation = await validateRequestBody(req, driverIssueSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { issueType, notes, deliveryCode, stopId } = validation.data;
 
     const auditEntry = await prisma.auditLog.create({
       data: {

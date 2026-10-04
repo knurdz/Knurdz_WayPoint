@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate_limiter';
+import { agentSynthesizeSchema, validateRequestBody } from '@/lib/api_schemas';
 
 // Default studio voice profiles available on ElevenLabs free tier
 const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel: Professional operations dispatcher
@@ -18,15 +19,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const text = (body.text || '')
+    const validation = await validateRequestBody(req, agentSynthesizeSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+
+    const rawText = validation.data.text;
+    const text = rawText
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-
-    if (!text) {
-      return NextResponse.json({ error: 'Text is required for voice synthesis' }, { status: 400 });
-    }
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
 
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const voiceId = body.voiceId || DEFAULT_VOICE_ID;
+    const voiceId = validation.data.voiceId || DEFAULT_VOICE_ID;
     const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`;
 
     const elevenRes = await fetch(url, {

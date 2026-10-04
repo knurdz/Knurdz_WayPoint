@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { deferOrderSchema, validateRequestBody } from "@/lib/api_schemas";
 
 interface StagedDeferral {
   id: string;
@@ -56,25 +57,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { reasonCode, impactNote, overrideReason, orderIds } = body;
-
-    // Validate reason code
-    const validCodes = [
-      "REEFER_CAPACITY",
-      "VAN_ONLY",
-      "WEIGHT_VOLUME",
-      "TIME_BUDGET",
-      "FUEL_QUOTA",
-      "MALL_WINDOW",
-    ];
-
-    if (!validCodes.includes(reasonCode)) {
-      return NextResponse.json(
-        { error: "Invalid standard deferral reason code" },
-        { status: 400 }
-      );
+    const validation = await validateRequestBody(req, deferOrderSchema);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { reasonCode, impactNote, overrideReason, orderIds } = validation.data;
 
     // Process deferral and record audit log
     sampleStagedDeferrals = sampleStagedDeferrals.map((item) =>

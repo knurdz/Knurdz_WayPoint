@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { loaderScanSchema, validateRequestBody } from "@/lib/api_schemas";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { sku, bayId, vehicleId } = body;
+    const validation = await validateRequestBody(req, loaderScanSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { sku, bayId, vehicleId } = validation.data;
 
     const validSkus: Record<string, { name: string; stop: number; temp: string; qty: string }> = {
       "SKU_FZ_VEG_01": { name: "Frozen Farm Vegetables 1kg", stop: 4, temp: "18C Frozen", qty: "12 Cases" },

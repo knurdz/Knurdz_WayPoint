@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthFromRequest } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate_limiter';
+import { storeOrderSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,16 +19,12 @@ export async function POST(req: NextRequest) {
     }
 
     const auth = await getAuthFromRequest(req);
-    const body = await req.json().catch(() => null);
-
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON request payload', code: 'INVALID_PAYLOAD' },
-        { status: 400 },
-      );
+    const validation = await validateRequestBody(req, storeOrderSchema);
+    if (!validation.success) {
+      return validation.response;
     }
 
-    const { ambientProduct, ambientWeight, chilledProduct, chilledWeight, outletCode } = body;
+    const { ambientProduct, ambientWeight, chilledProduct, chilledWeight, outletCode } = validation.data;
 
     if (
       auth?.outletId &&
@@ -45,30 +42,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const parsedAmbientWeight = Number(ambientWeight ?? 2100);
-    const parsedChilledWeight = Number(chilledWeight ?? 4850);
-
-    if (isNaN(parsedAmbientWeight) || parsedAmbientWeight < 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Ambient cargo weight must be a non negative number',
-          code: 'INVALID_AMBIENT_WEIGHT',
-        },
-        { status: 400 },
-      );
-    }
-
-    if (isNaN(parsedChilledWeight) || parsedChilledWeight < 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Chilled cargo weight must be a non negative number',
-          code: 'INVALID_CHILLED_WEIGHT',
-        },
-        { status: 400 },
-      );
-    }
+    const parsedAmbientWeight = ambientWeight;
+    const parsedChilledWeight = chilledWeight;
 
     if (parsedAmbientWeight > 7500 || parsedChilledWeight > 7500) {
       return NextResponse.json(
