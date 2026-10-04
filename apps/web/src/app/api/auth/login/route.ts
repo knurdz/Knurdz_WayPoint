@@ -8,6 +8,9 @@ const DEMO_ACCOUNTS: Record<string, { name: string; role: 'dispatcher' | 'loader
   'driver@waypoint.test': { name: 'Kamal Silva', role: 'driver' },
   'store@waypoint.test': { name: 'Anjali Jayawardena', role: 'store', outletId: 'OUT001' },
   'nimal.perera@waypoint.lk': { name: 'Nimal Perera', role: 'dispatcher' },
+  'priya.fernando@waypoint.lk': { name: 'Priya Fernando', role: 'loader' },
+  'kamal.silva@waypoint.lk': { name: 'Kamal Silva', role: 'driver' },
+  'anjali.jayawardena@waypoint.lk': { name: 'Anjali Jayawardena', role: 'store', outletId: 'OUT001' },
 };
 
 export async function POST(req: NextRequest) {

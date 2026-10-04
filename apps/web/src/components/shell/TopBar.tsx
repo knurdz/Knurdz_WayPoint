@@ -1,181 +1,200 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
-import CutoffTicker from './CutoffTicker';
-import { LogOut, User, Menu } from 'lucide-react';
+import {
+  Menu,
+  Search,
+  Bell,
+  PlusCircle,
+  LayoutGrid,
+  Truck,
+  Store,
+  CheckCircle2,
+} from 'lucide-react';
 
 interface TopBarProps {
   role?: string;
   userName?: string;
   depot?: string;
-  children?: React.ReactNode;
+  title?: string;
+  headerAction?: React.ReactNode;
   onOpenSearch?: () => void;
   onToggleSidebar?: () => void;
 }
 
+const TITLE_MAP: Record<string, string> = {
+  '/dispatcher': 'Mission Control',
+  '/dispatcher/allocation': 'Fleet Allocation',
+  '/dispatcher/queue': 'Order Queue',
+  '/dispatcher/exceptions': 'Exceptions',
+  '/dispatcher/cutoff': 'Cutoff Control Room',
+  '/dispatcher/deferral': 'Deferral Desk',
+  '/dispatcher/validator': 'Constraint Validator',
+  '/dispatcher/forecast': 'Capacity Forecast',
+  '/dispatcher/map': 'Fleet Live Map',
+  '/dispatcher/outlet': 'Outlet Profile',
+  '/loader': 'Warehouse Dock',
+  '/loader/runs': 'Vehicle Runs',
+  '/loader/depot': 'Depot Select',
+  '/loader/shortfall': 'Shortfall Report',
+  '/loader/signoff': 'Departure Signoff',
+  '/driver': 'Driver Cockpit',
+  '/driver/route': 'Driver Route',
+  '/driver/stop': 'Stop Detail',
+  '/driver/pod': 'Proof of Delivery',
+  '/driver/issue': 'Issue Report',
+  '/driver/sync': 'Offline & Sync',
+  '/driver/degradation': 'Network Degradation',
+  '/store': 'Store Portal',
+  '/store/orders': 'Orders List',
+  '/store/order': 'Place Order',
+  '/store/confirm': 'Order Confirmation',
+  '/store/cutoff': 'Cutoff Countdown',
+  '/store/deferral': 'Deferral Notice',
+  '/store/tracking': 'Delivery Tracking',
+  '/store/receipt': 'Receipt Confirmation',
+};
+
 export default function TopBar({
-  role = 'dispatcher',
-  userName = 'Nimal Perera',
-  depot = 'Peliyagoda Hub',
-  children,
+  title,
+  headerAction,
   onOpenSearch,
   onToggleSidebar,
 }: TopBarProps) {
-  const router = useRouter();
+  const pathname = usePathname() || '';
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch {
-      // ignore
-    }
-    router.push('/login');
-    router.refresh();
-  };
+  const displayTitle = title || TITLE_MAP[pathname] || 'Mission Control';
 
   return (
-    <header className="wp-topbar" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      height: 64,
-      padding: '0 24px',
-      borderBottom: '1px solid var(--wp-border, rgba(0,0,0,0.08))',
-      background: 'var(--wp-panel, #FFFFFF)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <header className="wp-topbar">
+      <div className="wp-topbar-left">
         <button
           type="button"
           onClick={onToggleSidebar}
           className="wp-nav-toggle"
           aria-label="Toggle navigation"
-          style={{
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 6,
-            borderRadius: 6,
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            color: 'var(--wp-heading, #1A1C1C)',
-          }}
         >
-          <Menu size={22} />
+          <Menu size={18} />
         </button>
-
-        <a href={`/${role}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <img src="/assets/logo-mark.svg" alt="Waypoint" width={32} height={32} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--wp-heading, #1A1C1C)', lineHeight: 1 }}>
-              Waypoint
-            </span>
-            <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--wp-muted, #6E838A)' }}>
-              Logistics
-            </span>
-          </div>
-        </a>
-
-        <div className="wp-topbar-depot-pill" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '4px 10px',
-          borderRadius: 6,
-          background: 'var(--wp-subpanel, #F8F8F7)',
-          border: '1px solid var(--wp-subpanel-border, rgba(0,0,0,0.06))',
-          fontSize: 12,
-          fontWeight: 600,
-          color: 'var(--wp-subtext, #3E555C)',
-        }}>
-          <span style={{ textTransform: 'capitalize' }}>{role}</span>
-          <span style={{ color: 'var(--wp-muted, #6E838A)' }}>•</span>
-          <span>{depot}</span>
-        </div>
+        <span className="wp-topbar-title">{displayTitle}</span>
       </div>
 
-      <div className="wp-topbar-search-wrap" style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="wp-topbar-center">
         <button
           type="button"
           onClick={onOpenSearch}
           className="wp-search-trigger"
+          data-wp-command-open
           aria-label="Search pages and actions"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '6px 14px',
-            borderRadius: 8,
-            border: '1px solid var(--wp-border, rgba(0,0,0,0.1))',
-            background: 'var(--wp-subpanel, #F8F8F7)',
-            color: 'var(--wp-muted, #6E838A)',
-            cursor: 'pointer',
-            fontSize: 13,
-          }}
         >
-          <span className="wp-search-trigger-text">Search pages, rules, outlets...</span>
-          <kbd className="wp-kbd" style={{ fontSize: 11, padding: '2px 5px', borderRadius: 4, border: '1px solid var(--wp-border)' }}>
-            ⌘K
-          </kbd>
+          <Search size={14} />
+          <span className="wp-search-trigger-text">Search pages and actions</span>
+          <kbd className="wp-kbd">⌘K</kbd>
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div className="wp-topbar-ticker-wrap">
-          <CutoffTicker />
-        </div>
-        {children}
-
+      <div className="wp-topbar-right">
         <ThemeToggle />
+        {headerAction ? (
+          headerAction
+        ) : (
+          <>
+            {pathname.startsWith('/dispatcher') && (
+              <>
+                <Link
+                  href="/dispatcher/exceptions"
+                  className="wp-icon-btn"
+                  title="System alerts"
+                  aria-label="Notifications"
+                  style={{ position: 'relative' }}
+                >
+                  <Bell size={16} />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      width: 7,
+                      height: 7,
+                      background: 'var(--wp-error)',
+                      borderRadius: '50%',
+                    }}
+                  />
+                </Link>
+                {pathname === '/dispatcher/allocation' ? (
+                  <Link
+                    href="/dispatcher/queue"
+                    className="wp-btn wp-btn-primary"
+                    style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                  >
+                    <PlusCircle size={14} />
+                    <span>Order Queue</span>
+                  </Link>
+                ) : pathname === '/dispatcher/queue' ? (
+                  <Link
+                    href="/dispatcher/allocation"
+                    className="wp-btn wp-btn-primary"
+                    style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                  >
+                    <LayoutGrid size={14} />
+                    <span>Allocation Board</span>
+                  </Link>
+                ) : (
+                  <Link
+                    href="/dispatcher/queue"
+                    className="wp-btn wp-btn-primary"
+                    style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                  >
+                    <PlusCircle size={14} />
+                    <span>Review Queue (142)</span>
+                  </Link>
+                )}
+              </>
+            )}
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '4px 10px',
-          borderRadius: 20,
-          background: 'var(--wp-subpanel, #F8F8F7)',
-          border: '1px solid var(--wp-border, rgba(0,0,0,0.08))',
-        }}>
-          <div style={{
-            width: 28,
-            height: 28,
-            borderRadius: '50%',
-            background: 'var(--wp-primary, #377A8B)',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 12,
-            fontWeight: 700,
-            flexShrink: 0,
-          }}>
-            {userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-          </div>
-          <span className="wp-topbar-user-name" style={{ fontSize: 13, fontWeight: 600, color: 'var(--wp-heading, #1A1C1C)', whiteSpace: 'nowrap' }}>
-            {userName}
-          </span>
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="Log out"
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--wp-muted, #6E838A)',
-              display: 'flex',
-              alignItems: 'center',
-              padding: 4,
-            }}
-          >
-            <LogOut size={15} />
-          </button>
-        </div>
+            {pathname.startsWith('/loader') && (
+              <>
+                <Link
+                  href="/loader/signoff"
+                  className="wp-btn wp-btn-primary"
+                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Departure Signoff</span>
+                </Link>
+              </>
+            )}
+
+            {pathname.startsWith('/driver') && (
+              <>
+                <Link
+                  href="/driver/route"
+                  className="wp-btn wp-btn-primary"
+                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                >
+                  <Truck size={14} />
+                  <span>Active Route</span>
+                </Link>
+              </>
+            )}
+
+            {pathname.startsWith('/store') && (
+              <>
+                <Link
+                  href="/store/order"
+                  className="wp-btn wp-btn-primary"
+                  style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                >
+                  <Store size={14} />
+                  <span>Place Order</span>
+                </Link>
+              </>
+            )}
+          </>
+        )}
       </div>
     </header>
   );

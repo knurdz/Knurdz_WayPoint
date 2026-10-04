@@ -398,7 +398,20 @@ export default function DispatcherAllocationPage() {
                     <circle cx="470" cy="54" r="14" fill="#1e293b" />
                   </svg>
                 </div>
-                <div className="wp-chassis-freezer-box" style={{ position: "relative", marginTop: "1rem" }}>
+                <div
+                  className="wp-chassis-freezer-box"
+                  style={{
+                    position: "relative",
+                    marginTop: "1.25rem",
+                    left: "auto",
+                    right: "auto",
+                    bottom: "auto",
+                    width: "100%",
+                    maxWidth: "520px",
+                    marginLeft: "auto",
+                    marginRight: "auto",
+                  }}
+                >
                   <span style={{ fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.06em" }}>REEFER BOX</span>
                   <span className="wp-chassis-temp">−18°C to +4°C</span>
                 </div>

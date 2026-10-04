@@ -11,6 +11,8 @@ interface AppShellProps {
   role?: 'dispatcher' | 'loader' | 'driver' | 'store';
   userName?: string;
   depot?: string;
+  title?: string;
+  headerAction?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -18,6 +20,8 @@ export default function AppShell({
   role = 'dispatcher',
   userName = 'Nimal Perera',
   depot = 'Peliyagoda Hub',
+  title,
+  headerAction,
   children,
 }: AppShellProps) {
   const { isOpen, openCopilot, closeCopilot } = useCopilot();
@@ -36,29 +40,29 @@ export default function AppShell({
 
   return (
     <ToastProvider>
-      <div className="wp-app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <TopBar
+      <div className="wp-layout">
+        <div
+          className="wp-sidebar-backdrop"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+        <Sidebar
           role={role}
           userName={userName}
           depot={depot}
-          onOpenSearch={openCopilot}
-          onToggleSidebar={() => setNavOpen((prev) => !prev)}
+          onClose={() => setNavOpen(false)}
         />
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-          <div
-            className="wp-sidebar-backdrop"
-            onClick={() => setNavOpen(false)}
-            aria-hidden="true"
+        <div className="wp-stage">
+          <TopBar
+            title={title}
+            role={role}
+            userName={userName}
+            depot={depot}
+            headerAction={headerAction}
+            onOpenSearch={openCopilot}
+            onToggleSidebar={() => setNavOpen((prev) => !prev)}
           />
-          <Sidebar role={role} onClose={() => setNavOpen(false)} />
-          <main style={{
-            flex: 1,
-            position: 'relative',
-            overflowY: 'auto',
-            background: 'var(--wp-canvas, #F5F5F3)',
-            padding: 24,
-            minWidth: 0,
-          }}>
+          <main className="wp-main">
             {children}
           </main>
         </div>

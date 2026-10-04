@@ -6400,7 +6400,7 @@ body.wp-login {
 }
 
 .wp-login-form-inner {
-  width: min(440px, 100%);
+  width: min(520px, 100%);
 }
 
 .wp-login-logo {
@@ -6869,6 +6869,353 @@ body.wp-login {
   border-radius: 999px;
   background: var(--wp-mark-on-primary);
 }
+
+/* -------------------------------------------------------------
+   Login Persona Selector & Quick Access Cards
+   ------------------------------------------------------------- */
+.wp-persona-selector-wrap {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.wp-persona-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.wp-persona-selector-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--wp-heading);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.wp-persona-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  background: var(--wp-primary-ghost);
+  color: var(--wp-primary);
+  border: 1px solid var(--wp-primary-marker);
+}
+
+.wp-persona-selector-desc {
+  font-size: 0.78rem;
+  color: var(--wp-muted);
+  margin: 0 0 0.75rem;
+  line-height: 1.4;
+}
+
+.wp-persona-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+@media (max-width: 480px) {
+  .wp-persona-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wp-persona-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--wp-border);
+  background: var(--wp-subpanel);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  user-select: none;
+}
+
+.wp-persona-card:hover {
+  background: var(--wp-panel-hover);
+  border-color: var(--wp-primary-ring);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.wp-persona-card:focus-visible {
+  border-color: var(--wp-primary);
+  box-shadow: 0 0 0 3px var(--wp-primary-ghost);
+}
+
+.wp-persona-card.is-active {
+  background: var(--wp-primary-wash);
+  border-color: var(--wp-primary);
+  box-shadow: 0 0 0 1px var(--wp-primary), 0 4px 14px rgba(55, 122, 139, 0.12);
+}
+
+html[data-theme="dark"] .wp-persona-card.is-active {
+  background: rgba(55, 122, 139, 0.16);
+  box-shadow: 0 0 0 1px var(--wp-primary), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.wp-persona-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.wp-persona-avatar {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.wp-persona-card:hover .wp-persona-avatar {
+  transform: scale(1.05);
+}
+
+.wp-persona-avatar.persona-disp {
+  background: rgba(55, 122, 139, 0.14);
+  color: var(--wp-primary);
+  border: 1px solid rgba(55, 122, 139, 0.28);
+}
+
+.wp-persona-avatar.persona-load {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563EB;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+}
+
+.wp-persona-avatar.persona-drv {
+  background: rgba(217, 119, 6, 0.12);
+  color: #D97706;
+  border: 1px solid rgba(217, 119, 6, 0.28);
+}
+
+.wp-persona-avatar.persona-store {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7C3AED;
+  border: 1px solid rgba(124, 58, 237, 0.28);
+}
+
+.wp-persona-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.wp-persona-role {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--wp-heading);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wp-persona-name {
+  font-size: 0.72rem;
+  color: var(--wp-subtext);
+  line-height: 1.2;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wp-persona-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--wp-border-strong);
+  color: transparent;
+  background: transparent;
+  flex-shrink: 0;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wp-persona-check svg {
+  width: 0.72rem;
+  height: 0.72rem;
+  stroke-width: 3;
+}
+
+.wp-persona-card.is-active .wp-persona-check {
+  border-color: var(--wp-primary);
+  background: var(--wp-primary);
+  color: #FFFFFF;
+  transform: scale(1.05);
+}
+
+.wp-persona-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.68rem;
+  color: var(--wp-muted);
+  border-top: 1px solid var(--wp-border-sub);
+  padding-top: 0.45rem;
+}
+
+.wp-persona-dest {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: var(--wp-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wp-persona-dest svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.wp-persona-scope {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--wp-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wp-persona-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.45rem;
+  font-size: 0.7rem;
+  color: var(--wp-muted);
+}
+
+.wp-persona-hint span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wp-persona-hint svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* Login Divider */
+.wp-login-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.15rem 0 1rem;
+  text-align: center;
+}
+
+.wp-login-divider::before,
+.wp-login-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--wp-border);
+}
+
+.wp-login-divider span {
+  padding: 0 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--wp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Active Persona Notification Banner */
+.wp-persona-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: var(--wp-primary-wash);
+  border: 1px solid var(--wp-primary-marker);
+  font-size: 0.76rem;
+  color: var(--wp-subtext);
+  line-height: 1.35;
+  transition: all 0.2s ease;
+}
+
+html[data-theme="dark"] .wp-persona-banner {
+  background: rgba(55, 122, 139, 0.12);
+  border-color: rgba(55, 122, 139, 0.25);
+}
+
+.wp-persona-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--wp-primary);
+  flex-shrink: 0;
+}
+
+.wp-persona-banner-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.wp-persona-banner-text {
+  flex: 1;
+}
+
+.wp-persona-banner-text strong {
+  color: var(--wp-heading);
+}
+
+.wp-persona-banner-dest {
+  color: var(--wp-primary);
+  font-weight: 700;
+}
+
+.wp-login-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.wp-login-submit svg {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.15s ease;
+}
+
+.wp-login-submit:hover svg {
+  transform: translateX(2px);
+}
+
+
 
 /* -------------------------------------------------------------
    Definition lists used on outlet and sign-off screens
@@ -9401,68 +9748,23 @@ body.wp-agent-live .wp-agent-glow {
   }
 }
 
-@media (min-width: 1024px) {
-  .wp-app-shell .wp-sidebar {
-    position: static;
-    top: auto;
-    bottom: auto;
-    left: auto;
-    z-index: 10;
-    height: calc(100vh - 64px);
-    max-height: calc(100vh - 64px);
-    overflow-y: auto;
-    flex-shrink: 0;
+@media (max-width: 1023px) {
+  .wp-nav-toggle {
+    display: flex !important;
   }
 
   .wp-sidebar-mobile-header {
-    display: none !important;
+    display: flex !important;
   }
 }
 
-@media (max-width: 1023px) {
-  .wp-app-shell .wp-sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 50;
-    height: 100vh;
-    max-height: 100vh;
-    width: min(280px, 88vw);
-    min-width: 0;
-    max-width: min(280px, 88vw);
-    transform: translateX(-100%);
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  body.wp-nav-open .wp-app-shell .wp-sidebar {
-    transform: translateX(0);
-  }
-
+@media (min-width: 1024px) {
   .wp-sidebar-mobile-header {
-    display: flex !important;
-  }
-
-  .wp-nav-toggle {
-    display: flex !important;
+    display: none !important;
   }
 }
 
 @media (max-width: 768px) {
-  .wp-topbar-depot-pill,
-  .wp-search-trigger-text,
-  .wp-topbar-search-wrap .wp-kbd {
-    display: none !important;
-  }
-
-  .wp-topbar {
-    padding: 0 12px !important;
-  }
-
-  .wp-topbar-search-wrap .wp-search-trigger {
-    padding: 8px !important;
-  }
-
   .route-layout,
   .screen-grid-2,
   .screen-grid-3,
@@ -9470,13 +9772,6 @@ body.wp-agent-live .wp-agent-glow {
   .wp-fleet-map-layout,
   .deg-store-dual {
     grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 640px) {
-  .wp-topbar-user-name,
-  .wp-topbar-ticker-wrap {
-    display: none !important;
   }
 }
 
