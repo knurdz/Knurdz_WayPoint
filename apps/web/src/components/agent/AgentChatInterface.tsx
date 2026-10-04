@@ -12,8 +12,15 @@ import {
   RefreshCw,
   Volume2,
   VolumeX,
+  Zap,
+  Radio,
+  Thermometer,
+  Truck,
+  Package,
+  Clock,
+  UserCheck,
 } from 'lucide-react';
-import { useVoiceAgent } from '@/hooks/useVoiceAgent';
+import { useFullDuplexVoice, VoiceDuplexMode } from '@/hooks/useFullDuplexVoice';
 import { useAgent } from './AgentContext';
 
 export interface ActionDefinition {
@@ -30,6 +37,8 @@ export interface ChatMessage {
   text: string;
   time: string;
   action?: ActionDefinition;
+  telemetryData?: Record<string, unknown>;
+  toolName?: string;
   fromVoice?: boolean;
 }
 
@@ -41,11 +50,11 @@ interface AgentChatInterfaceProps {
 }
 
 const DEFAULT_SUGGESTIONS = [
+  'Where is truck TRK 001 and is cold chain safe?',
+  'Any cold chain temperature breaches?',
   'How many orders today?',
-  'What is the cutoff time?',
-  'Open exceptions',
-  'Open fleet allocation',
-  'Review warehouse dock',
+  'What is the cutoff time remaining?',
+  'Where is driver Sunil right now?',
   'Explain Rule 01 maximum payload',
 ];
 
@@ -66,24 +75,7 @@ export default function AgentChatInterface({
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const {
-    isListening,
-    isSpeaking,
-    isSupported: voiceSupported,
-    startListening,
-    stopListening,
-    speak,
-    stopSpeaking,
-  } = useVoiceAgent();
-
   const isDegraded = degradationState !== 'ready';
-
-  // Scroll to bottom when messages update
-  useEffect(() => {
-    if (threadRef.current) {
-      threadRef.current.scrollTop = threadRef.current.scrollHeight;
-    }
-  }, [messages, showWelcome]);
 
   const handleQuery = useCallback(
     async (queryText: string, fromVoice = false) => {
@@ -128,14 +120,16 @@ export default function AgentChatInterface({
             minute: '2-digit',
           }),
           action: data.action || undefined,
+          telemetryData: data.telemetryData || undefined,
+          toolName: data.toolName || undefined,
           fromVoice,
         };
 
         setMessages((prev) => [...prev, agentMsg]);
 
-        // Vocalize response if originated from voice or voice feedback is enabled
+        // Vocalize response if from voice or voice feedback enabled
         if ((fromVoice || voicePlaybackEnabled) && replyText) {
-          speak(replyText);
+          voiceEngine.speak(replyText);
         }
       } catch {
         const errorMsg: ChatMessage = {
@@ -152,26 +146,55 @@ export default function AgentChatInterface({
         setLoading(false);
       }
     },
-    [loading, isDegraded, voicePlaybackEnabled, speak]
+    [loading, isDegraded, voicePlaybackEnabled]
   );
 
-  const handleMicClick = () => {
+  const voiceEngine = useFullDuplexVoice({
+    mode: 'full_duplex',
+    onUserTranscript: (transcript) => {
+      handleQuery(transcript, true);
+    },
+    onBargeIn: () => {
+      // Barge in detected, user interrupted the agent speech
+    },
+  });
+
+  const {
+    duplexMode,
+    isListening,
+    isSpeaking,
+    isUserSpeaking,
+    isInterrupted,
+    audioLevel,
+    isSupported: voiceSupported,
+    startSession,
+    stopSession,
+    cancelSpeech,
+    toggleDuplexMode,
+  } = voiceEngine;
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    if (threadRef.current) {
+      threadRef.current.scrollTop = threadRef.current.scrollHeight;
+    }
+  }, [messages, showWelcome, isInterrupted]);
+
+  const handleMicToggle = async () => {
     if (isDegraded || !voiceSupported) return;
 
     if (isListening) {
-      stopListening();
+      stopSession();
     } else {
-      stopSpeaking();
-      startListening((transcript) => {
-        handleQuery(transcript, true);
-      });
+      cancelSpeech();
+      await startSession();
     }
   };
 
   const handleAllowAction = (action: ActionDefinition, fromVoice?: boolean) => {
     setLive(true, action.status);
     if (fromVoice && voicePlaybackEnabled) {
-      speak(`Opening ${action.label}`);
+      voiceEngine.speak(`Opening ${action.label}`);
     }
     if (onNavigateComplete) {
       onNavigateComplete();
@@ -181,7 +204,7 @@ export default function AgentChatInterface({
 
   const handleDenyAction = (fromVoice?: boolean) => {
     const denyReply =
-      "Understood. I will not navigate without your approval. Ask me anything else or request another operation.";
+      'Understood. I will not navigate without your approval. Ask me anything else or request another operation.';
     const denyMsg: ChatMessage = {
       id: `agent_${Date.now()}`,
       sender: 'agent',
@@ -193,7 +216,7 @@ export default function AgentChatInterface({
     };
     setMessages((prev) => [...prev, denyMsg]);
     if (fromVoice && voicePlaybackEnabled) {
-      speak(denyReply);
+      voiceEngine.speak(denyReply);
     }
   };
 
@@ -213,15 +236,39 @@ export default function AgentChatInterface({
         minHeight: isDrawer ? '100%' : undefined,
       }}
     >
-      <header className="wp-agent-chat-head" style={{ justifyContent: 'space-between' }}>
+      <header className="wp-agent-chat-head" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div className="wp-agent-chat-avatar" aria-hidden="true">
             <Bot size={20} />
           </div>
           <div>
-            <h1 className="wp-agent-chat-title" style={{ fontSize: '1rem', margin: 0 }}>
-              Waypoint Agent
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h1 className="wp-agent-chat-title" style={{ fontSize: '1rem', margin: 0 }}>
+                Waypoint Agent
+              </h1>
+              {/* Duplex mode badge */}
+              <button
+                type="button"
+                onClick={toggleDuplexMode}
+                className="wp-agent-prompt"
+                style={{
+                  fontSize: '0.68rem',
+                  padding: '0.15rem 0.55rem',
+                  minHeight: '1.5rem',
+                  borderRadius: '999px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: duplexMode === 'full_duplex' ? 'var(--wp-primary-wash)' : 'var(--wp-subpanel)',
+                  color: duplexMode === 'full_duplex' ? 'var(--wp-primary)' : 'var(--wp-subtext)',
+                  borderColor: duplexMode === 'full_duplex' ? 'var(--wp-primary)' : 'var(--wp-border)',
+                }}
+                title={duplexMode === 'full_duplex' ? 'Full Duplex: continuous conversation with barge in' : 'Half Duplex: push to talk'}
+              >
+                <Radio size={12} />
+                <span>{duplexMode === 'full_duplex' ? 'Full Duplex' : 'Half Duplex'}</span>
+              </button>
+            </div>
             <p
               className={`wp-agent-chat-status ${
                 degradationState === 'offline'
@@ -236,34 +283,94 @@ export default function AgentChatInterface({
                 ? 'Offline — voice and remote model paused'
                 : degradationState === 'unavailable'
                 ? 'Model unavailable — fallback mode active'
-                : isListening
-                ? 'Listening to microphone input...'
+                : isInterrupted
+                ? '⚡ Barge in detected — listening to your voice...'
+                : isUserSpeaking
+                ? 'User speaking — streaming speech audio...'
                 : isSpeaking
                 ? 'Vocalizing agent response...'
+                : isListening
+                ? duplexMode === 'full_duplex'
+                  ? 'Full Duplex live — talk anytime, you can interrupt'
+                  : 'Listening to microphone input...'
                 : 'Ready to help with chat or voice'}
             </p>
           </div>
         </div>
 
-        {/* Voice audio playback toggle */}
-        <button
-          type="button"
-          onClick={() => {
-            if (isSpeaking) stopSpeaking();
-            setVoicePlaybackEnabled((prev) => !prev);
-          }}
-          className="wp-icon-btn"
-          aria-label={voicePlaybackEnabled ? 'Mute vocal feedback' : 'Enable vocal feedback'}
-          title={voicePlaybackEnabled ? 'Vocal feedback enabled' : 'Vocal feedback muted'}
-          style={{ width: '2rem', height: '2rem' }}
-        >
-          {voicePlaybackEnabled ? (
-            <Volume2 size={16} color="var(--wp-primary)" />
-          ) : (
-            <VolumeX size={16} color="var(--wp-subtext)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          {/* Audio level meter when active */}
+          {isListening && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px',
+                height: '1.25rem',
+                padding: '0 0.4rem',
+                borderRadius: '4px',
+                background: 'var(--wp-subpanel)',
+                border: '1px solid var(--wp-border)',
+              }}
+              title="Acoustic audio energy level"
+            >
+              {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, idx) => (
+                <span
+                  key={idx}
+                  style={{
+                    width: '3px',
+                    height: `${(idx + 1) * 3}px`,
+                    borderRadius: '1px',
+                    background: audioLevel >= threshold ? 'var(--wp-primary)' : 'var(--wp-border)',
+                    transition: 'background 0.08s ease',
+                  }}
+                />
+              ))}
+            </div>
           )}
-        </button>
+
+          {/* Vocal feedback toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              if (isSpeaking) cancelSpeech();
+              setVoicePlaybackEnabled((prev) => !prev);
+            }}
+            className="wp-icon-btn"
+            aria-label={voicePlaybackEnabled ? 'Mute vocal feedback' : 'Enable vocal feedback'}
+            title={voicePlaybackEnabled ? 'Vocal feedback enabled' : 'Vocal feedback muted'}
+            style={{ width: '2rem', height: '2rem' }}
+          >
+            {voicePlaybackEnabled ? (
+              <Volume2 size={16} color="var(--wp-primary)" />
+            ) : (
+              <VolumeX size={16} color="var(--wp-subtext)" />
+            )}
+          </button>
+        </div>
       </header>
+
+      {/* Barge in notification banner */}
+      {isInterrupted && (
+        <div
+          style={{
+            margin: '0.5rem 1rem 0',
+            padding: '0.4rem 0.85rem',
+            borderRadius: '0.5rem',
+            background: 'var(--wp-primary-wash)',
+            border: '1px solid var(--wp-primary-ring)',
+            color: 'var(--wp-primary)',
+            fontSize: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            fontWeight: 600,
+          }}
+        >
+          <Zap size={14} />
+          <span>Barge in detected: Agent paused speech to listen to your voice.</span>
+        </div>
+      )}
 
       <div
         className="wp-agent-thread"
@@ -320,7 +427,7 @@ export default function AgentChatInterface({
           </div>
         )}
 
-        {/* Welcome Card matching prototype */}
+        {/* Welcome Card */}
         {showWelcome && degradationState === 'ready' && (
           <div className="wp-agent-welcome" data-wp-agent-welcome>
             <div className="wp-agent-msg-row wp-agent-msg-row--agent">
@@ -329,8 +436,8 @@ export default function AgentChatInterface({
               </span>
               <div className="wp-agent-welcome-card">
                 <p>
-                  Hi — I am Waypoint Agent. Ask about today operations or request a screen change.
-                  Navigation actions need your approval.
+                  Hi — I am Waypoint Agent. Ask about real time deliveries, live vehicle telemetry,
+                  cold chain sensor breaches, or cutoff status. You can speak naturally and interrupt anytime.
                 </p>
                 <div className="wp-agent-suggestions" aria-label="Suggested prompts">
                   {DEFAULT_SUGGESTIONS.map((promptText) => (
@@ -365,6 +472,135 @@ export default function AgentChatInterface({
 
             <div className={`wp-agent-msg wp-agent-msg--${msg.sender}`}>
               <div>{msg.text}</div>
+
+              {/* Real time vehicle telemetry card */}
+              {msg.telemetryData && typeof msg.telemetryData === 'object' && 'id' in msg.telemetryData && (
+                <div
+                  style={{
+                    marginTop: '0.65rem',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    background: 'var(--wp-panel)',
+                    border: '1px solid var(--wp-border-sub)',
+                    fontSize: '0.78rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
+                      <Truck size={14} color="var(--wp-primary)" />
+                      <span>{String(msg.telemetryData.id)}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--wp-subtext)', fontWeight: 400 }}>
+                        ({String(msg.telemetryData.driver)})
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        background:
+                          msg.telemetryData.coldChainStatus === 'breach'
+                            ? 'rgba(220, 38, 38, 0.15)'
+                            : msg.telemetryData.coldChainStatus === 'warning'
+                            ? 'rgba(217, 119, 6, 0.15)'
+                            : 'rgba(22, 163, 74, 0.15)',
+                        color:
+                          msg.telemetryData.coldChainStatus === 'breach'
+                            ? '#DC2626'
+                            : msg.telemetryData.coldChainStatus === 'warning'
+                            ? '#D97706'
+                            : '#16A34A',
+                      }}
+                    >
+                      {String(msg.telemetryData.coldChainStatus).toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', color: 'var(--wp-subtext)' }}>
+                    <div>Location: <strong style={{ color: 'var(--wp-heading)' }}>{String(msg.telemetryData.location)}</strong></div>
+                    <div>Speed: <strong style={{ color: 'var(--wp-heading)' }}>{String(msg.telemetryData.speedKmH)} km/h</strong></div>
+                    {msg.telemetryData.chilledTempC !== undefined && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Thermometer size={12} />
+                        <span>Chilled: <strong style={{ color: 'var(--wp-heading)' }}>{String(msg.telemetryData.chilledTempC)}°C</strong></span>
+                      </div>
+                    )}
+                    {msg.telemetryData.frozenTempC !== undefined && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Thermometer size={12} />
+                        <span>Freezer: <strong style={{ color: 'var(--wp-heading)' }}>{String(msg.telemetryData.frozenTempC)}°C</strong></span>
+                      </div>
+                    )}
+                    <div>Progress: <strong style={{ color: 'var(--wp-heading)' }}>{String(msg.telemetryData.completedStops)}/{String(msg.telemetryData.totalStops)} stops</strong></div>
+                    <div>Assigned Orders: <strong style={{ color: 'var(--wp-heading)' }}>{String(msg.telemetryData.assignedOrders)}</strong></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Real time deliveries summary card */}
+              {msg.telemetryData && typeof msg.telemetryData === 'object' && 'totalOrders' in msg.telemetryData && (
+                <div
+                  style={{
+                    marginTop: '0.65rem',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    background: 'var(--wp-panel)',
+                    border: '1px solid var(--wp-border-sub)',
+                    fontSize: '0.78rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, marginBottom: '0.45rem' }}>
+                    <Package size={14} color="var(--wp-primary)" />
+                    <span>Operational Deliveries Summary</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.45rem' }}>
+                    <div style={{ padding: '0.35rem', background: 'var(--wp-subpanel)', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--wp-subtext)' }}>Total Orders</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--wp-primary)' }}>{String(msg.telemetryData.totalOrders)}</div>
+                    </div>
+                    <div style={{ padding: '0.35rem', background: 'var(--wp-subpanel)', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--wp-subtext)' }}>Confirmed</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#16A34A' }}>{String(msg.telemetryData.confirmedOrders)}</div>
+                    </div>
+                    <div style={{ padding: '0.35rem', background: 'var(--wp-subpanel)', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--wp-subtext)' }}>In Transit</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#D97706' }}>{String(msg.telemetryData.inTransitOrders)}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Real time cutoff card */}
+              {msg.telemetryData && typeof msg.telemetryData === 'object' && 'minutesRemaining' in msg.telemetryData && (
+                <div
+                  style={{
+                    marginTop: '0.65rem',
+                    padding: '0.65rem',
+                    borderRadius: '0.5rem',
+                    background: 'var(--wp-panel)',
+                    border: '1px solid var(--wp-border-sub)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Clock size={16} color="var(--wp-primary)" />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem' }}>Cutoff 16:00 SLST</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--wp-subtext)' }}>
+                        {String(msg.telemetryData.pendingReviews)} orders pending deferral desk review
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--wp-primary)' }}>
+                      {String(msg.telemetryData.minutesRemaining)} min
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Human in the loop action authorization card */}
               {msg.action && (
@@ -405,13 +641,13 @@ export default function AgentChatInterface({
               <Bot size={16} />
             </span>
             <div className="wp-agent-msg wp-agent-msg--agent" style={{ fontStyle: 'italic' }}>
-              Thinking and verifying operational constraints...
+              Querying real time telemetry snapshot and feasibility rules...
             </div>
           </div>
         )}
       </div>
 
-      {/* Composer matching prototype */}
+      {/* Composer */}
       <form className="wp-agent-composer" onSubmit={handleFormSubmit}>
         <input
           ref={inputRef}
@@ -424,6 +660,8 @@ export default function AgentChatInterface({
               ? 'Offline — messaging paused'
               : degradationState === 'unavailable'
               ? 'Model unavailable — retry to continue'
+              : isListening && duplexMode === 'full_duplex'
+              ? 'Full Duplex live — talk freely or type here…'
               : 'Message Waypoint Agent…'
           }
           disabled={isDegraded || loading}
@@ -433,13 +671,15 @@ export default function AgentChatInterface({
 
         <button
           type="button"
-          onClick={handleMicClick}
+          onClick={handleMicToggle}
           className={`wp-btn wp-btn-outline wp-agent-mic ${isListening ? 'is-listening' : ''}`}
           aria-label={
             !voiceSupported
               ? 'Voice input unavailable in browser'
               : isListening
-              ? 'Listening...'
+              ? duplexMode === 'full_duplex'
+                ? 'Full Duplex session active — click to stop'
+                : 'Listening...'
               : 'Ask with voice'
           }
           aria-pressed={isListening}
@@ -448,7 +688,9 @@ export default function AgentChatInterface({
             !voiceSupported
               ? 'Voice recognition not supported in this browser'
               : isListening
-              ? 'Listening to microphone'
+              ? duplexMode === 'full_duplex'
+                ? 'Full Duplex active with instant barge in — click to stop'
+                : 'Listening to microphone'
               : 'Ask with voice'
           }
         >
