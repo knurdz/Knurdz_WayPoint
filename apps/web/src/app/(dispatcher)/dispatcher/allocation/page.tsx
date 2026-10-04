@@ -240,7 +240,7 @@ export default function DispatcherAllocationPage() {
           <span className="mc-pill mc-pill-info">{vehicles.length} Active Chassis</span>
         </div>
 
-        <div className="wp-fleet-scroll" style={{ display: "flex", gap: "0.75rem", overflowX: "auto", paddingBottom: "0.5rem" }}>
+        <div className="wp-fleet-scroll">
           {vehicles.map((v) => (
             <div
               key={v.id}
