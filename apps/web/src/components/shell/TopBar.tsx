@@ -13,7 +13,10 @@ import {
   Truck,
   Store,
   CheckCircle2,
+  MessageSquare,
+  AudioWaveform,
 } from 'lucide-react';
+import { useAgent } from '../agent/AgentContext';
 
 interface TopBarProps {
   role?: string;
@@ -65,6 +68,7 @@ export default function TopBar({
   onToggleSidebar,
 }: TopBarProps) {
   const pathname = usePathname() || '';
+  const { isLive, toggleLive, openDrawer } = useAgent();
 
   const displayTitle = title || TITLE_MAP[pathname] || 'Mission Control';
 
@@ -97,6 +101,29 @@ export default function TopBar({
       </div>
 
       <div className="wp-topbar-right">
+        <div className="wp-agent-controls">
+          <button
+            type="button"
+            onClick={openDrawer}
+            className="wp-icon-btn wp-agent-chat-link"
+            aria-label="Open Waypoint Agent chat"
+            title="Open Agent chat"
+          >
+            <MessageSquare size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={toggleLive}
+            className={`wp-btn wp-btn-outline wp-agent-toggle ${isLive ? 'is-active' : ''}`}
+            data-wp-agent-toggle
+            aria-pressed={isLive}
+            aria-label={isLive ? 'Deactivate Waypoint Agent' : 'Activate Waypoint Agent'}
+            title={isLive ? 'Agent active — click to deactivate' : 'Activate Waypoint Agent'}
+          >
+            <AudioWaveform size={14} />
+            <span>Agent</span>
+          </button>
+        </div>
         <ThemeToggle />
         {headerAction ? (
           headerAction

@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import CopilotModal from '../copilot/CopilotModal';
 import { useCopilot } from '../../hooks/useCopilot';
 import { ToastProvider } from '../ui/Toast';
+import { AgentProvider } from '../agent/AgentContext';
 
 interface AppShellProps {
   role?: 'dispatcher' | 'loader' | 'driver' | 'store';
@@ -40,34 +41,36 @@ export default function AppShell({
 
   return (
     <ToastProvider>
-      <div className="wp-layout">
-        <div
-          className="wp-sidebar-backdrop"
-          onClick={() => setNavOpen(false)}
-          aria-hidden="true"
-        />
-        <Sidebar
-          role={role}
-          userName={userName}
-          depot={depot}
-          onClose={() => setNavOpen(false)}
-        />
-        <div className="wp-stage">
-          <TopBar
-            title={title}
+      <AgentProvider>
+        <div className="wp-layout">
+          <div
+            className="wp-sidebar-backdrop"
+            onClick={() => setNavOpen(false)}
+            aria-hidden="true"
+          />
+          <Sidebar
             role={role}
             userName={userName}
             depot={depot}
-            headerAction={headerAction}
-            onOpenSearch={openCopilot}
-            onToggleSidebar={() => setNavOpen((prev) => !prev)}
+            onClose={() => setNavOpen(false)}
           />
-          <main className="wp-main">
-            {children}
-          </main>
+          <div className="wp-stage">
+            <TopBar
+              title={title}
+              role={role}
+              userName={userName}
+              depot={depot}
+              headerAction={headerAction}
+              onOpenSearch={openCopilot}
+              onToggleSidebar={() => setNavOpen((prev) => !prev)}
+            />
+            <main className="wp-main">
+              {children}
+            </main>
+          </div>
+          <CopilotModal isOpen={isOpen} onClose={closeCopilot} />
         </div>
-        <CopilotModal isOpen={isOpen} onClose={closeCopilot} />
-      </div>
+      </AgentProvider>
     </ToastProvider>
   );
 }
