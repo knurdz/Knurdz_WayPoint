@@ -1,5 +1,14 @@
 @import "tailwindcss";
 @import "./waypoint.css";
+@import "leaflet/dist/leaflet.css";
+
+/* Leaflet map interactive overrides */
+.wp-fleet-vehicle-icon,
+.wp-stop-marker,
+.wp-depot-marker {
+  cursor: pointer !important;
+  user-select: none;
+}
 
 :root {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

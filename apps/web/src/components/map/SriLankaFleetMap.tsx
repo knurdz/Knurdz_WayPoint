@@ -8,21 +8,46 @@ interface SriLankaFleetMapProps {
   vehicles: MapVehicle[];
   selectedVehicleId: string;
   onSelectVehicle: (id: string) => void;
+  activeChassisFilter?: 'all' | 'fridge' | 'van' | 'truck';
+  onFilterChange?: (filter: 'all' | 'fridge' | 'van' | 'truck') => void;
 }
 
 export default function SriLankaFleetMap({
   vehicles,
   selectedVehicleId,
   onSelectVehicle,
+  activeChassisFilter,
+  onFilterChange,
 }: SriLankaFleetMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ [key: string]: any }>({});
   const polylineGroupRef = useRef<any>(null);
 
   // Map display filters
-  const [filterType, setFilterType] = useState<'all' | 'fridge' | 'van' | 'truck'>('all');
+  const [internalFilterType, setInternalFilterType] = useState<'all' | 'fridge' | 'van' | 'truck'>('all');
+  const filterType = activeChassisFilter !== undefined ? activeChassisFilter : internalFilterType;
+
+  const setFilterType = (newFilter: 'all' | 'fridge' | 'van' | 'truck') => {
+    setInternalFilterType(newFilter);
+    if (onFilterChange) onFilterChange(newFilter);
+  };
   const [loadFilter, setLoadFilter] = useState<'all' | 'empty' | 'half' | 'full'>('all');
+
+  // Prevent Leaflet map from absorbing click/drag events on the control panel
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    async function setupControlEvents() {
+      if (!controlsRef.current) return;
+      const L = (await import('leaflet')).default;
+      if (controlsRef.current) {
+        L.DomEvent.disableClickPropagation(controlsRef.current);
+        L.DomEvent.disableScrollPropagation(controlsRef.current);
+      }
+    }
+    setupControlEvents();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -221,8 +246,9 @@ export default function SriLankaFleetMap({
               .bindPopup(`<b>Stop ${s.stopNumber}: ${s.outletName}</b><br>Status: ${s.status}<br>ETA: ${s.eta}`);
           });
 
-          // Smoothly pan to selected vehicle
+          // Smoothly pan to selected vehicle and open its telematics popup
           map.panTo([v.lat, v.lng], { animate: true, duration: 0.8 });
+          marker.openPopup();
         }
       });
     }
@@ -236,6 +262,7 @@ export default function SriLankaFleetMap({
 
       {/* Top Left: PickMe / Uber Map Filter Controls */}
       <div
+        ref={controlsRef}
         style={{
           position: 'absolute',
           top: 12,
@@ -250,6 +277,7 @@ export default function SriLankaFleetMap({
           flexDirection: 'column',
           gap: 6,
           border: '1px solid rgba(0,0,0,0.08)',
+          pointerEvents: 'auto',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
