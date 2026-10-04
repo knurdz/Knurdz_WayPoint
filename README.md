@@ -10,18 +10,23 @@ Waypoint is an enterprise grade shared logistics optimization and fleet manageme
 * **Public Production URL**: [https://waypoint.knurdz.org](https://waypoint.knurdz.org)
 * **Local Evaluation URL**: [http://localhost:3000](http://localhost:3000) or [http://localhost](http://localhost) (via Caddy Reverse Proxy)
 * **Demonstration Video**: [Tech Triathlon 2026 Demonstration Video](https://knurdz.org/waypoint-demo)
-* **Repository**: [https://github.com/knurdz/Knurdz_WayPoint](https://github.com/knurdz/Knurdz_WayPoint)
+* **Repository (TeamName_SolutionName)**: [https://github.com/knurdz/Knurdz_WayPoint](https://github.com/knurdz/Knurdz_WayPoint)
+
+### Official Submission Documentation
+* **Architecture Design & Diagrams**: [docs/architecture.md](docs/architecture.md)
+* **Relational Data Model & ERD**: [docs/data_model.md](docs/data_model.md)
+* **AI Tool & Solver Disclosure**: [docs/ai_disclosure.md](docs/ai_disclosure.md)
 
 ### Seeded Demonstration Accounts
 
 All seeded demonstration accounts use the verified password: `Waypoint2026!`
 
-| Role | Seeded Email | Default Password | Primary Responsibilities | Target View |
+| Role | Seeded Email (Primary / Alternative) | Default Password | Primary Responsibilities | Target View |
 |---|---|---|---|---|
-| **Dispatcher** | `dispatcher@waypoint.test` | `Waypoint2026!` | Post cutoff optimization, fleet board, live GPS map | `/dispatcher` |
-| **Warehouse Loader** | `loader@waypoint.test` | `Waypoint2026!` | Loading dock staging, reverse LIFO sequence, damage reporting | `/loader` |
-| **Delivery Driver** | `driver@waypoint.test` | `Waypoint2026!` | Route manifest, real time GPS beacon, offline touch POD | `/driver/route` |
-| **Store Manager** | `store@waypoint.test` | `Waypoint2026!` | Daily order placement, 16:00 cutoff alerts, receipt sign off | `/store` |
+| **Dispatcher** | `dispatcher@waypoint.test` <br/>`dispatcher@waypoint.knurdz.org` | `Waypoint2026!` | Post cutoff optimization, fleet board, live GPS map | `/dispatcher` |
+| **Warehouse Loader** | `loader@waypoint.test` <br/>`loader@waypoint.knurdz.org` | `Waypoint2026!` | Loading dock staging, reverse LIFO sequence, damage reporting | `/loader` |
+| **Delivery Driver** | `driver@waypoint.test` <br/>`driver@waypoint.knurdz.org` | `Waypoint2026!` | Route manifest, real time GPS beacon, offline touch POD | `/driver/route` |
+| **Store Manager** | `store@waypoint.test` <br/>`store@waypoint.knurdz.org` | `Waypoint2026!` | Daily order placement, 16:00 cutoff alerts, receipt sign off | `/store` |
 
 *Note: The login screen also features 1 click role selector profile cards to load assigned credentials instantly for rapid evaluation.*
 
