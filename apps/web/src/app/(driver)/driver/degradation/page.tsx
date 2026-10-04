@@ -32,41 +32,10 @@ export default function DegradationPage() {
             className="wp-btn wp-btn-primary"
             style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
           >
-            Start offline demo <ArrowRight size={16} />
+            Open offline sync dashboard <ArrowRight size={16} />
           </Link>
         </div>
       </section>
-
-      <div
-        className="screen-sync-states"
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          marginBottom: "1.5rem",
-          flexWrap: "wrap",
-        }}
-      >
-        {["1 Offline", "2 Queued", "3 Syncing", "4 Synced", "5 Conflict"].map(
-          (label) => (
-            <Link
-              key={label}
-              href="/driver/sync"
-              className="screen-sync-state"
-              style={{
-                padding: "0.45rem 0.85rem",
-                borderRadius: "6px",
-                border: "1px solid var(--wp-border)",
-                backgroundColor: "var(--wp-surface)",
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                color: "var(--wp-text-main, currentColor)",
-              }}
-            >
-              {label}
-            </Link>
-          )
-        )}
-      </div>
 
       <div
         className="wp-panel"

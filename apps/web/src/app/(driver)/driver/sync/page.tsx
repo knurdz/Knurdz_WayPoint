@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   WifiOff,
@@ -16,6 +16,19 @@ type SyncState = "offline" | "queued" | "syncing" | "synced" | "conflict";
 export default function DriverSyncPage() {
   const [syncState, setSyncState] = useState<SyncState>("offline");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const updateOnline = () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setSyncState("offline");
+      }
+    };
+    updateOnline();
+    window.addEventListener("offline", updateOnline);
+    return () => {
+      window.removeEventListener("offline", updateOnline);
+    };
+  }, []);
 
   const handleSyncReplay = async () => {
     setIsSubmitting(true);
@@ -60,48 +73,6 @@ export default function DriverSyncPage() {
       </div>
 
       <div
-        className="screen-sync-states"
-        role="tablist"
-        aria-label="Sync states"
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-          marginBottom: "1.5rem",
-          flexWrap: "wrap",
-        }}
-      >
-        {(["offline", "queued", "syncing", "synced", "conflict"] as SyncState[]).map(
-          (state, idx) => (
-            <button
-              key={state}
-              type="button"
-              className="screen-sync-state"
-              role="tab"
-              aria-pressed={syncState === state}
-              onClick={() => setSyncState(state)}
-              style={{
-                padding: "0.5rem 1rem",
-                borderRadius: "var(--wp-radius-sm, 6px)",
-                border: "1px solid var(--wp-border)",
-                backgroundColor:
-                  syncState === state ? "var(--wp-primary)" : "var(--wp-surface)",
-                color:
-                  syncState === state
-                    ? "#ffffff"
-                    : "var(--wp-text-main, currentColor)",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textTransform: "capitalize",
-              }}
-            >
-              {idx + 1} {state}
-            </button>
-          )
-        )}
-      </div>
-
-      <div
         className="screen-grid-2"
         style={{
           display: "grid",
@@ -118,7 +89,7 @@ export default function DriverSyncPage() {
               marginBottom: "1rem",
             }}
           >
-            <span className="wp-label">Mobile 375 · Driver device</span>
+            <span className="wp-label">Driver Handheld Cockpit · Offline Sync</span>
             <button
               type="button"
               onClick={handleSyncReplay}
@@ -131,32 +102,9 @@ export default function DriverSyncPage() {
           </div>
 
           <div
-            className="deg-phone-frame"
-            style={{
-              maxWidth: "375px",
-              margin: "0 auto",
-              border: "8px solid #1e293b",
-              borderRadius: "32px",
-              background: "var(--wp-surface, #ffffff)",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-              overflow: "hidden",
-            }}
+            className="deg-driver-screen"
+            style={{ padding: "0.5rem 0", minHeight: "520px" }}
           >
-            <div
-              className="deg-phone-screen"
-              style={{ padding: "1.25rem 1rem", minHeight: "520px" }}
-            >
-              <div
-                className="deg-phone-notch"
-                aria-hidden="true"
-                style={{
-                  width: "120px",
-                  height: "18px",
-                  backgroundColor: "#1e293b",
-                  borderRadius: "0 0 10px 10px",
-                  margin: "-1.25rem auto 1rem auto",
-                }}
-              />
 
               {syncState === "offline" && (
                 <div>
@@ -585,7 +533,6 @@ export default function DriverSyncPage() {
                   </div>
                 </div>
               )}
-            </div>
           </div>
         </section>
 

@@ -169,7 +169,7 @@ export default function DispatcherExceptionsPage() {
       <section className="deg-strip wp-panel" style={{ padding: "1.25rem 1.5rem" }}>
         <div className="deg-strip-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
           <div>
-            <span className="wp-label">DISP 07 · Degradation Simulation</span>
+            <span className="wp-label">Active Dispute Triage · Route R025229</span>
             <h2 className="wp-headline-sm" style={{ margin: "0.35rem 0 0" }}>
               Kandy hill country blackout · VEH037 · Route R025229
             </h2>
@@ -177,22 +177,7 @@ export default function DispatcherExceptionsPage() {
               Server deferred OUT003 at 6:00 AM while Kamal Silva delivered offline at 6:35 AM with proof of delivery.
             </p>
           </div>
-          <span className="mc-pill mc-pill-info">State: {syncState.toUpperCase()}</span>
-        </div>
-
-        {/* Tab state buttons */}
-        <div className="screen-sync-states" style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-          {(["offline", "queued", "syncing", "synced", "conflict"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`wp-btn ${syncState === s ? "wp-btn-primary" : "wp-btn-outline"}`}
-              style={{ fontSize: "0.75rem", padding: "0.35rem 0.75rem" }}
-              onClick={() => setSyncState(s)}
-            >
-              {s.toUpperCase()}
-            </button>
-          ))}
+          <span className="mc-pill mc-pill-info">Triage Status: {syncState.toUpperCase()}</span>
         </div>
 
         <div className="screen-grid-2" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "1.25rem" }}>
