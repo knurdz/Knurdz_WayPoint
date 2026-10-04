@@ -41,7 +41,7 @@ const PERSONAS: Persona[] = [
     dest: 'Mission Control',
     destIcon: Home,
     scope: 'HQ · 142 Orders',
-    email: 'nimal.perera@waypoint.lk',
+    email: 'dispatcher@waypoint.test',
     redirectUrl: '/dispatcher',
   },
   {
@@ -53,7 +53,7 @@ const PERSONAS: Persona[] = [
     dest: 'Warehouse Dock',
     destIcon: PackageCheck,
     scope: 'Dock 04 · LIFO',
-    email: 'priya.fernando@waypoint.lk',
+    email: 'loader@waypoint.test',
     redirectUrl: '/loader',
   },
   {
@@ -65,7 +65,7 @@ const PERSONAS: Persona[] = [
     dest: 'Driver Route',
     destIcon: Truck,
     scope: 'VEH037 · POD',
-    email: 'kamal.silva@waypoint.lk',
+    email: 'driver@waypoint.test',
     redirectUrl: '/driver/route',
   },
   {
@@ -77,10 +77,11 @@ const PERSONAS: Persona[] = [
     dest: 'Store Portal',
     destIcon: Store,
     scope: 'OUT001 Galle Rd',
-    email: 'anjali.jayawardena@waypoint.lk',
+    email: 'store@waypoint.test',
     redirectUrl: '/store',
   },
 ];
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -154,8 +155,9 @@ export default function LoginPage() {
           <div className="wp-login-card">
             <h2>Sign In</h2>
             <p className="wp-login-subtitle">
-              Select a demo persona to explore role specific workflows, or enter credentials below:
+              Select a seeded enterprise role or enter credentials below:
             </p>
+
 
             {error && (
               <div
