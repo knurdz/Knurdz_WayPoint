@@ -94,6 +94,17 @@ export async function middleware(req: NextRequest) {
   const protectedRoles = Object.keys(ROLE_ROUTES) as UserRole[];
   const isProtected = protectedRoles.some((role) => pathname.startsWith(ROLE_ROUTES[role]));
 
+  if (pathname === '/') {
+    const session = req.cookies.get(AUTH_COOKIE);
+    if (session && session.value) {
+      const payload = await verifySessionToken(session.value);
+      if (payload && payload.role && ROLE_ROUTES[payload.role]) {
+        return NextResponse.redirect(new URL(ROLE_ROUTES[payload.role], req.url));
+      }
+    }
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+
   if (!isProtected) {
     if (pathname === '/login') {
       const session = req.cookies.get(AUTH_COOKIE);
@@ -138,6 +149,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     '/dispatcher/:path*',
     '/loader/:path*',
     '/driver/:path*',
