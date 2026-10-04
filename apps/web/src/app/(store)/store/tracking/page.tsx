@@ -1,10 +1,48 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { CheckCircle2, Clock, MapPin, Truck, ArrowRight, ShieldCheck } from "lucide-react";
+import type { MapVehicle } from "@/app/api/dispatcher/map/route";
+
+const SriLankaFleetMap = dynamic(
+  () => import("@/components/map/SriLankaFleetMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{
+          height: "260px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--wp-panel-bg, #f8fafc)",
+          color: "var(--wp-text-muted, #64748b)",
+          fontSize: "0.85rem",
+          borderRadius: "8px",
+        }}
+      >
+        Connecting to Sri Lanka Live Fleet Telemetry...
+      </div>
+    ),
+  }
+);
 
 export default function StoreTrackingPage() {
+  const [vehicles, setVehicles] = useState<MapVehicle[]>([]);
+
+  useEffect(() => {
+    fetch("/api/dispatcher/map")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.vehicles) {
+          setVehicles(data.vehicles);
+        }
+      })
+      .catch((err) => console.error("Store tracking fetch error:", err));
+  }, []);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", maxWidth: "1200px", margin: "0 auto" }}>
       {/* Header */}
@@ -14,7 +52,7 @@ export default function StoreTrackingPage() {
           <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
             Order DEL 88401 Tracking
           </h1>
-          <p className="wp-subtext">Store Manager: Anjali Jayawardena · Assigned Chassis: VEH037</p>
+          <p className="wp-subtext">Store Manager: Anjali Jayawardena · Assigned Blue Reefer Van: VEH037</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span className="mc-pill mc-pill-ok" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
@@ -41,19 +79,12 @@ export default function StoreTrackingPage() {
               <span className="wp-subtext" style={{ fontSize: "0.75rem" }}>Peliyagoda Hub → OUT003</span>
             </div>
 
-            <div className="wp-corridor-map wp-corridor-map--compact" style={{ margin: "0.5rem 0 1rem" }}>
-              <svg viewBox="0 0 600 220" style={{ width: "100%", height: "200px", display: "block", borderRadius: "8px" }}>
-                <rect width="600" height="220" fill="#EEF3F6" />
-                <path d="M40,140 Q200,120 360,130 T560,145" fill="none" stroke="#C5D0D8" strokeWidth="5" />
-                <circle cx="280" cy="135" r="10" fill="#16a34a" />
-                <text x="280" y="118" fill="#64748B" fontFamily="JetBrains Mono, monospace" fontSize="9" fontWeight="700" textAnchor="middle">
-                  VEH037 (Delivered)
-                </text>
-                <circle cx="480" cy="140" r="8" fill="#0284c7" />
-                <text x="480" y="125" fill="#1A1C1C" fontFamily="JetBrains Mono, monospace" fontSize="9" fontWeight="700" textAnchor="middle">
-                  OUT003 Fresh Galle Rd
-                </text>
-              </svg>
+            <div style={{ margin: "0.5rem 0 1rem", minHeight: "280px", borderRadius: "8px", overflow: "hidden" }}>
+              <SriLankaFleetMap
+                vehicles={vehicles}
+                selectedVehicleId="VEH037"
+                onSelectVehicle={() => {}}
+              />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid var(--wp-border-color, #e2e8f0)" }}>
