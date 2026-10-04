@@ -11,17 +11,27 @@ import {
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+const currentDir =
+  typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+
+const getBcrypt = () => {
+  return ((bcrypt as unknown as { default?: typeof bcrypt }).default || bcrypt);
+};
 
 async function main() {
   console.info('Starting Waypoint database seed process...');
 
   const candidateDirs = [
     process.env.DATA_DIR,
-    path.resolve(__dirname, '../../../data'),
-    path.resolve(__dirname, '../../data'),
+    path.resolve(currentDir, '../../../data'),
+    path.resolve(currentDir, '../../data'),
     path.resolve(process.cwd(), 'data'),
     path.resolve(process.cwd(), '../../data'),
   ].filter(Boolean) as string[];
@@ -146,8 +156,9 @@ async function main() {
   // Seed Default Demo Accounts
   console.info('Seeding default authenticated accounts...');
   const defaultPassword = process.env.DEFAULT_USER_PASSWORD || 'Waypoint2026!';
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash(defaultPassword, salt);
+  const b = getBcrypt();
+  const salt = await b.genSalt(10);
+  const passwordHash = await b.hash(defaultPassword, salt);
 
   const demoUsers = [
     { email: 'dispatcher@waypoint.test', name: 'Nimal Perera', role: Role.dispatcher },
