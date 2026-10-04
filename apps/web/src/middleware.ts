@@ -48,7 +48,6 @@ export async function middleware(req: NextRequest) {
     '/api/driver': ['driver', 'dispatcher'],
     '/api/store': ['store', 'dispatcher'],
     '/api/agent': ['dispatcher', 'loader', 'driver', 'store'],
-    '/api/simulator': ['dispatcher'],
     '/api/sync': ['driver', 'dispatcher'],
   };
 
@@ -162,7 +161,6 @@ export const config = {
     '/api/driver/:path*',
     '/api/store/:path*',
     '/api/agent/:path*',
-    '/api/simulator/:path*',
     '/api/sync/:path*',
     '/login',
   ],

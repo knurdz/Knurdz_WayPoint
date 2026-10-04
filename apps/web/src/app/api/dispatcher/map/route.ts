@@ -226,7 +226,7 @@ const baseFleetVehicles: MapVehicle[] = [
 ];
 
 export async function GET() {
-  // Merge live dynamic telemetry from chaos simulator
+  // Merge live dynamic telemetry from telemetry store
   const enrichedVehicles = baseFleetVehicles.map((v) => {
     // Map VEH003 to TRK002 in telemetry
     if (v.id === 'VEH003' && IN_MEMORY_FLEET_TELEMETRY.TRK002) {
