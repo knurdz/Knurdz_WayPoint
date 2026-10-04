@@ -147,7 +147,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
   }, [stopAllPlayback]);
 
   // Web Audio API analyzer with acoustic echo cancellation
-  const startAudioAnalysis = async () => {
+  const startAudioAnalysis = useCallback(async () => {
     if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
 
     try {
@@ -216,9 +216,9 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     } catch {
       // microphone access denied or not allowed
     }
-  };
+  }, [stopAllPlayback]);
 
-  const stopAudioAnalysis = () => {
+  const stopAudioAnalysis = useCallback(() => {
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -237,7 +237,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     }
     setAudioLevel(0);
     setIsUserSpeaking(false);
-  };
+  }, []);
 
   const startSession = useCallback(async () => {
     setError(null);
@@ -254,7 +254,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
         }
       }
     }
-  }, []);
+  }, [startAudioAnalysis]);
 
   const stopSession = useCallback(() => {
     stopAudioAnalysis();
