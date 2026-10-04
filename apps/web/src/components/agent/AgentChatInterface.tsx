@@ -18,9 +18,9 @@ import {
   Truck,
   Package,
   Clock,
-  UserCheck,
+  Sparkles,
 } from 'lucide-react';
-import { useFullDuplexVoice, VoiceDuplexMode } from '@/hooks/useFullDuplexVoice';
+import { useFullDuplexVoice } from '@/hooks/useFullDuplexVoice';
 import { useAgent } from './AgentContext';
 
 export interface ActionDefinition {
@@ -31,6 +31,14 @@ export interface ActionDefinition {
   status: string;
 }
 
+export interface RAGCitation {
+  id: string;
+  title: string;
+  category: string;
+  actionUrl?: string;
+  score: number;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'agent';
@@ -39,6 +47,8 @@ export interface ChatMessage {
   action?: ActionDefinition;
   telemetryData?: Record<string, unknown>;
   toolName?: string;
+  citations?: RAGCitation[];
+  ragContext?: string;
   fromVoice?: boolean;
 }
 
@@ -51,11 +61,11 @@ interface AgentChatInterfaceProps {
 
 const DEFAULT_SUGGESTIONS = [
   'Where is truck TRK 001 and is cold chain safe?',
-  'Any cold chain temperature breaches?',
+  'What is the issue with Peliyagoda Bay 04?',
+  'What is the vehicle restriction for OUT003?',
   'How many orders today?',
   'What is the cutoff time remaining?',
-  'Where is driver Sunil right now?',
-  'Explain Rule 01 maximum payload',
+  'Explain Rule 08 mall delivery window',
 ];
 
 export default function AgentChatInterface({
@@ -71,9 +81,11 @@ export default function AgentChatInterface({
   const [loading, setLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [voicePlaybackEnabled, setVoicePlaybackEnabled] = useState(true);
+  const [expandedRAGMsgId, setExpandedRAGMsgId] = useState<string | null>(null);
 
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const speakRef = useRef<(text: string) => void>(() => {});
 
   const isDegraded = degradationState !== 'ready';
 
@@ -122,6 +134,8 @@ export default function AgentChatInterface({
           action: data.action || undefined,
           telemetryData: data.telemetryData || undefined,
           toolName: data.toolName || undefined,
+          citations: data.citations || undefined,
+          ragContext: data.ragContext || undefined,
           fromVoice,
         };
 
@@ -129,7 +143,7 @@ export default function AgentChatInterface({
 
         // Vocalize response if from voice or voice feedback enabled
         if ((fromVoice || voicePlaybackEnabled) && replyText) {
-          voiceEngine.speak(replyText);
+          speakRef.current(replyText);
         }
       } catch {
         const errorMsg: ChatMessage = {
@@ -151,6 +165,7 @@ export default function AgentChatInterface({
 
   const voiceEngine = useFullDuplexVoice({
     mode: 'full_duplex',
+    provider: 'elevenlabs',
     onUserTranscript: (transcript) => {
       handleQuery(transcript, true);
     },
@@ -159,8 +174,11 @@ export default function AgentChatInterface({
     },
   });
 
+  speakRef.current = voiceEngine.speak;
+
   const {
     duplexMode,
+    voiceProvider,
     isListening,
     isSpeaking,
     isUserSpeaking,
@@ -171,6 +189,7 @@ export default function AgentChatInterface({
     stopSession,
     cancelSpeech,
     toggleDuplexMode,
+    toggleVoiceProvider,
   } = voiceEngine;
 
   // Scroll to bottom when messages update
@@ -178,7 +197,7 @@ export default function AgentChatInterface({
     if (threadRef.current) {
       threadRef.current.scrollTop = threadRef.current.scrollHeight;
     }
-  }, [messages, showWelcome, isInterrupted]);
+  }, [messages, showWelcome, isInterrupted, expandedRAGMsgId]);
 
   const handleMicToggle = async () => {
     if (isDegraded || !voiceSupported) return;
@@ -242,7 +261,7 @@ export default function AgentChatInterface({
             <Bot size={20} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h1 className="wp-agent-chat-title" style={{ fontSize: '1rem', margin: 0 }}>
                 Waypoint Agent
               </h1>
@@ -267,6 +286,33 @@ export default function AgentChatInterface({
               >
                 <Radio size={12} />
                 <span>{duplexMode === 'full_duplex' ? 'Full Duplex' : 'Half Duplex'}</span>
+              </button>
+
+              {/* Voice provider badge */}
+              <button
+                type="button"
+                onClick={toggleVoiceProvider}
+                className="wp-agent-prompt"
+                style={{
+                  fontSize: '0.68rem',
+                  padding: '0.15rem 0.55rem',
+                  minHeight: '1.5rem',
+                  borderRadius: '999px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  background: voiceProvider === 'elevenlabs' ? 'var(--wp-primary-wash)' : 'var(--wp-subpanel)',
+                  color: voiceProvider === 'elevenlabs' ? 'var(--wp-primary)' : 'var(--wp-subtext)',
+                  borderColor: voiceProvider === 'elevenlabs' ? 'var(--wp-primary)' : 'var(--wp-border)',
+                }}
+                title={
+                  voiceProvider === 'elevenlabs'
+                    ? 'Studio Voice: ElevenLabs streaming synthesis with automatic local fallback'
+                    : 'Local Browser Voice: zero network speech synthesis'
+                }
+              >
+                <Sparkles size={12} />
+                <span>{voiceProvider === 'elevenlabs' ? 'ElevenLabs Voice' : 'Browser Voice'}</span>
               </button>
             </div>
             <p
@@ -437,7 +483,7 @@ export default function AgentChatInterface({
               <div className="wp-agent-welcome-card">
                 <p>
                   Hi — I am Waypoint Agent. Ask about real time deliveries, live vehicle telemetry,
-                  cold chain sensor breaches, or cutoff status. You can speak naturally and interrupt anytime.
+                  bay constraints, or active dock incidents. You can speak naturally and interrupt anytime.
                 </p>
                 <div className="wp-agent-suggestions" aria-label="Suggested prompts">
                   {DEFAULT_SUGGESTIONS.map((promptText) => (
@@ -602,6 +648,130 @@ export default function AgentChatInterface({
                 </div>
               )}
 
+              {/* Dynamic RAG Grounded Sources Inspector */}
+              {msg.citations && msg.citations.length > 0 && (
+                <div style={{ marginTop: '0.55rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedRAGMsgId(expandedRAGMsgId === msg.id ? null : msg.id)}
+                    style={{
+                      background: 'var(--wp-subpanel)',
+                      border: '1px solid var(--wp-border-sub)',
+                      borderRadius: '999px',
+                      padding: '0.2rem 0.65rem',
+                      fontSize: '0.7rem',
+                      color: 'var(--wp-primary)',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Sparkles size={11} />
+                    <span>{msg.citations.length} Operational Sources Cited</span>
+                  </button>
+
+                  {expandedRAGMsgId === msg.id && (
+                    <div
+                      style={{
+                        marginTop: '0.45rem',
+                        padding: '0.65rem 0.75rem',
+                        background: 'var(--wp-panel)',
+                        border: '1px solid var(--wp-border-sub)',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.74rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: 'var(--wp-heading)',
+                          fontSize: '0.7rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        RAG Grounding & Operational Sources
+                      </div>
+                      {msg.citations.map((c) => (
+                        <div
+                          key={c.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.3rem 0.45rem',
+                            borderRadius: '4px',
+                            background: 'var(--wp-subpanel)',
+                            border: '1px solid var(--wp-border-sub)',
+                            gap: '0.5rem',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              minWidth: 0,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                padding: '0.1rem 0.35rem',
+                                borderRadius: '3px',
+                                background: 'var(--wp-primary-wash)',
+                                color: 'var(--wp-primary)',
+                                fontWeight: 700,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {c.category}
+                            </span>
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                color: 'var(--wp-heading)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {c.title}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+                            <span style={{ color: 'var(--wp-subtext)', fontSize: '0.68rem' }}>{c.score}% Match</span>
+                            {c.actionUrl && (
+                              <button
+                                type="button"
+                                onClick={() => router.push(c.actionUrl!)}
+                                style={{
+                                  fontSize: '0.68rem',
+                                  color: 'var(--wp-primary)',
+                                  textDecoration: 'underline',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                }}
+                              >
+                                Open
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Human in the loop action authorization card */}
               {msg.action && (
                 <div className="wp-agent-auth-card" style={{ marginTop: '0.75rem' }}>
@@ -641,7 +811,7 @@ export default function AgentChatInterface({
               <Bot size={16} />
             </span>
             <div className="wp-agent-msg wp-agent-msg--agent" style={{ fontStyle: 'italic' }}>
-              Querying real time telemetry snapshot and feasibility rules...
+              Querying dynamic operational RAG index and telemetry streams...
             </div>
           </div>
         )}
