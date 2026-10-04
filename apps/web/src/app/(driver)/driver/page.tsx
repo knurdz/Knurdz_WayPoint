@@ -43,7 +43,7 @@ export default function DriverHomePage() {
               <div>
                 <strong>OUT001 · Fresh Galle Rd</strong>
                 <span className="wp-access-chip wp-access-chip--van_only" style={{ marginTop: '0.2rem' }}>
-                  <Truck size={12} /> van_only
+                  <Truck size={12} /> Van Only
                 </span>
                 <p className="wp-subtext" style={{ margin: '0.2rem 0 0', fontSize: '0.75rem' }}>Delivered 05:32</p>
               </div>
@@ -55,7 +55,7 @@ export default function DriverHomePage() {
               <div>
                 <strong>OUT002 · Duplication Rd</strong>
                 <span className="wp-access-chip wp-access-chip--van_only" style={{ marginTop: '0.2rem' }}>
-                  <Truck size={12} /> van_only
+                  <Truck size={12} /> Van Only
                 </span>
                 <p className="wp-subtext" style={{ margin: '0.2rem 0 0', fontSize: '0.75rem' }}>14 min · window closes 08:00</p>
               </div>
@@ -67,7 +67,7 @@ export default function DriverHomePage() {
               <div>
                 <strong>OUT003 · Marine Drive</strong>
                 <span className="wp-access-chip wp-access-chip--street" style={{ marginTop: '0.2rem' }}>
-                  <MapPin size={12} /> street
+                  <MapPin size={12} /> Street Access
                 </span>
                 <p className="wp-subtext" style={{ margin: '0.2rem 0 0', fontSize: '0.75rem' }}>Planned 06:40</p>
               </div>
@@ -78,7 +78,7 @@ export default function DriverHomePage() {
               <div>
                 <strong>OUT010 · Colombo 03</strong>
                 <span className="wp-access-chip wp-access-chip--rear_dock" style={{ marginTop: '0.2rem' }}>
-                  <Container size={12} /> rear_dock
+                  <Container size={12} /> Rear Dock
                 </span>
                 <p className="wp-subtext" style={{ margin: '0.2rem 0 0', fontSize: '0.75rem' }}>Last stop · 07:15</p>
               </div>

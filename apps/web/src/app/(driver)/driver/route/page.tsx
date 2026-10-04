@@ -14,6 +14,7 @@ import {
   CornerUpRight,
   X,
 } from 'lucide-react';
+import { formatAccessType } from '@/lib/formatters';
 
 interface StopData {
   id: string;
@@ -46,7 +47,7 @@ const STOPS: StopData[] = [
     deliveryId: 'DEL-88401',
     outletId: 'OUT001',
     outletName: 'Fresh Galle Rd',
-    accessChip: 'van_only',
+    accessChip: 'Van Only',
     accessType: 'van_only',
     status: 'done',
     statusLabel: 'Delivered',
@@ -62,7 +63,7 @@ const STOPS: StopData[] = [
     deliveryId: 'DEL-88402',
     outletId: 'OUT002',
     outletName: 'Duplication Rd',
-    accessChip: 'van_only',
+    accessChip: 'Van Only',
     accessType: 'van_only',
     status: 'active',
     statusLabel: 'In Transit',
@@ -90,7 +91,7 @@ const STOPS: StopData[] = [
     deliveryId: 'DEL-88403',
     outletId: 'OUT003',
     outletName: 'Marine Drive',
-    accessChip: 'street',
+    accessChip: 'Street Access',
     accessType: 'street',
     status: 'later',
     statusLabel: 'Scheduled',
@@ -117,7 +118,7 @@ const STOPS: StopData[] = [
     deliveryId: 'DEL-88404',
     outletId: 'OUT010',
     outletName: 'Colombo 03 · Produce',
-    accessChip: 'van_only',
+    accessChip: 'Van Only',
     accessType: 'van_only',
     status: 'later',
     statusLabel: 'Scheduled',
@@ -275,7 +276,7 @@ export default function DriverRoutePage() {
                       <strong>{stop.outletId} · {stop.outletName}</strong>
                       <span className={`wp-access-chip wp-access-chip--${stop.accessType}`} style={{ marginTop: '0.2rem' }}>
                         {stop.accessType === 'van_only' ? <Truck size={12} /> : <MapPin size={12} />}
-                        <span>{stop.accessChip}</span>
+                        <span>{formatAccessType(stop.accessType) || stop.accessChip}</span>
                       </span>
                       <span className="cab-stop-meta">{stop.meta}</span>
                       {stop.criticalNote && (

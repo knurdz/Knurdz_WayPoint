@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Truck, Building2, Container, MapPin, Clock, ShieldCheck, ArrowRight, ExternalLink } from 'lucide-react';
+import { formatAccessType } from '@/lib/formatters';
 
 type OutletAccessType = 'van_only' | 'mall_dock' | 'rear_dock' | 'street';
 
@@ -161,7 +162,7 @@ export default function DispatcherOutletPage() {
             cursor: 'pointer',
           }}
         >
-          <Truck size={16} /> van_only
+          <Truck size={16} /> Van Only
         </button>
 
         <button
@@ -182,7 +183,7 @@ export default function DispatcherOutletPage() {
             cursor: 'pointer',
           }}
         >
-          <Building2 size={16} /> mall_dock
+          <Building2 size={16} /> Mall Dock
         </button>
 
         <button
@@ -203,7 +204,7 @@ export default function DispatcherOutletPage() {
             cursor: 'pointer',
           }}
         >
-          <Container size={16} /> rear_dock
+          <Container size={16} /> Rear Dock
         </button>
 
         <button
@@ -224,7 +225,7 @@ export default function DispatcherOutletPage() {
             cursor: 'pointer',
           }}
         >
-          <MapPin size={16} /> street
+          <MapPin size={16} /> Street Access
         </button>
       </div>
 
@@ -240,7 +241,7 @@ export default function DispatcherOutletPage() {
           }}
         >
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, marginBottom: 16 }}>
-            {selectedType} Physical Specifications
+            {formatAccessType(selectedType)} Physical Specifications
           </h2>
 
           <dl style={{ display: 'grid', gridTemplateColumns: '120px 1fr', rowGap: 10, fontSize: 13, margin: 0 }}>
