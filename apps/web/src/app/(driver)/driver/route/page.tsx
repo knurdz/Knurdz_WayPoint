@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   WifiOff,
@@ -13,7 +13,9 @@ import {
   MessageCircle,
   CornerUpRight,
   X,
+  Radio,
 } from 'lucide-react';
+
 import { formatAccessType } from '@/lib/formatters';
 
 interface StopData {
@@ -145,6 +147,66 @@ export default function DriverRoutePage() {
   const [search, setSearch] = useState('');
   const [openStopId, setOpenStopId] = useState<string>('stop-2');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [gpsActive, setGpsActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+
+    let watchId: number | undefined;
+
+    const postTelemetry = async (pos: GeolocationPosition) => {
+      setGpsActive(true);
+      try {
+        await fetch('/api/driver/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicleId: 'VEH037',
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            speed: pos.coords.speed ? pos.coords.speed * 3.6 : 36,
+            heading: pos.coords.heading || 180,
+            accuracy: pos.coords.accuracy,
+            timestamp: pos.timestamp,
+          }),
+        });
+      } catch {
+        // Retry silently on next interval
+      }
+    };
+
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => postTelemetry(pos),
+        (err) => {
+          // Send default coastal corridor fix if geolocation is simulated/blocked
+          fetch('/api/driver/telemetry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vehicleId: 'VEH037',
+              latitude: 6.9015,
+              longitude: 79.856,
+              speed: 36,
+              heading: 175,
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+      );
+    } catch {
+      // Ignore
+    }
+
+    return () => {
+      if (watchId !== undefined && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, []);
 
   const filteredStops = STOPS.filter((stop) => {
     if (filter === 'active' && stop.status !== 'active') return false;
@@ -173,6 +235,17 @@ export default function DriverRoutePage() {
           <p className="wp-subtext store-page-subtitle">Coastal corridor · Nissan Cabstar · 1 of 4 stops delivered</p>
         </div>
         <div className="route-tools">
+          <span
+            className="cab-pill"
+            style={{
+              background: gpsActive ? 'rgba(16, 185, 129, 0.15)' : 'var(--wp-border-color, #f1f5f9)',
+              color: gpsActive ? '#15803d' : 'inherit',
+              border: gpsActive ? '1px solid #10b981' : '1px solid transparent',
+            }}
+          >
+            <Radio size={13} style={{ color: gpsActive ? '#10b981' : 'inherit' }} />
+            <span>{gpsActive ? 'GPS Telemetry Active' : 'Satellite GPS'}</span>
+          </span>
           <Link href="/driver/sync" className="wp-offline-banner stale" title="Open offline sync">
             <WifiOff size={14} />
             <span>Offline: 3 queued</span>
@@ -193,6 +266,7 @@ export default function DriverRoutePage() {
           </button>
         </div>
       </div>
+
 
       <div className="route-layout">
         {/* Left Column: Delivery Run Sheet */}
