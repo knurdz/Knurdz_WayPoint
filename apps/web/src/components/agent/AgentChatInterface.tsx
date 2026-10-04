@@ -362,12 +362,12 @@ export default function AgentChatInterface({
               }}
               title="Acoustic audio energy level"
             >
-              {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, idx) => (
+              {[0.2, 0.4, 0.6, 0.8, 1.0].map((threshold, barIndex) => (
                 <span
-                  key={idx}
+                  key={`audio-bar-${threshold}`}
                   style={{
                     width: '3px',
-                    height: `${(idx + 1) * 3}px`,
+                    height: `${(barIndex + 1) * 3}px`,
                     borderRadius: '1px',
                     background: audioLevel >= threshold ? 'var(--wp-primary)' : 'var(--wp-border)',
                     transition: 'background 0.08s ease',

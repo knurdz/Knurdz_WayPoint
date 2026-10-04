@@ -31,25 +31,34 @@ export default function DispatcherValidatorPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadValidatorData() {
       try {
         const res = await fetch("/api/dispatcher/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
+          signal: controller.signal,
         });
         if (res.ok) {
           const data = await res.json();
           setTrips(data.trips || []);
           setSwaps(data.legalSwaps || []);
         }
-      } catch (err) {
-        console.error("Failed to load validation details", err);
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.error("Failed to load validation details", err);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     loadValidatorData();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleApplySwap = (swap: LegalSwap) => {
