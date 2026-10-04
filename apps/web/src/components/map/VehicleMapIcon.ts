@@ -1,6 +1,6 @@
 /**
  * VehicleMapIcon.ts
- * Generates custom SVG vehicle markers styled after PickMe and Uber logistics:
+ * Generates custom SVG vehicle markers with live telemetry:
  * - Vans vs Trucks (aerodynamic van vs heavy box truck chassis)
  * - Refrigerated vehicles rendered as Blue Van / Blue Truck with reefer condenser & snowflake
  * - Ambient vehicles rendered in standard commercial liveries
@@ -26,7 +26,6 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
     chassis,
     hasFridge,
     loadStatus,
-    loadPct,
     speedKmH,
     heading,
     isSelected = false,
@@ -57,18 +56,18 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
     loadStatus === 'full' ? '#ef4444' : loadStatus === 'half' ? '#f59e0b' : '#94a3b8';
   const loadText = loadStatus === 'full' ? 'FULL' : loadStatus === 'half' ? 'HALF' : 'EMPTY';
 
-  // Dimensions
-  const svgWidth = isTruck ? 44 : 38;
-  const svgHeight = isTruck ? 72 : 58;
+  // Compact, scaled-down vehicle dimensions
+  const svgWidth = isTruck ? 32 : 26;
+  const svgHeight = isTruck ? 52 : 42;
 
   // Render Truck SVG
   if (isTruck) {
     return `
-      <div style="position: relative; width: ${svgWidth}px; height: ${svgHeight + 22}px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+      <div style="position: relative; width: ${svgWidth}px; height: ${svgHeight + 18}px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
         <!-- Pulsing Radar Ripple for Live GPS -->
         ${
           isLiveGps
-            ? `<div style="position: absolute; top: 14px; width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); pointer-events: none; animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
+            ? `<div style="position: absolute; top: 6px; width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); pointer-events: none; animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
             : ''
         }
 
@@ -78,7 +77,7 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
           height: ${svgHeight}px;
           transform: rotate(${heading}deg);
           transition: transform 0.4s ease-out;
-          filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+          filter: drop-shadow(0 3px 8px rgba(0,0,0,0.35));
           pointer-events: none;
         ">
           <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 44 72" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -131,22 +130,22 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
           </svg>
         </div>
 
-        <!-- PickMe / Uber Style Telemetry Badge -->
+        <!-- Real-Time Telemetry Badge -->
         <div style="
-          margin-top: 4px;
+          margin-top: 3px;
           background: ${hasFridge ? 'rgba(2, 132, 199, 0.94)' : 'rgba(15, 23, 42, 0.92)'};
           color: #ffffff;
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 700;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          padding: 2px 6px;
-          border-radius: 4px;
+          padding: 1.5px 5px;
+          border-radius: 3px;
           white-space: nowrap;
           border: 1px solid rgba(255,255,255,0.25);
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 3px;
         ">
           ${hasFridge ? '<span style="color: #bae6fd;">❄</span>' : ''}
           <span>${code}</span>
@@ -161,11 +160,11 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
 
   // Render Van SVG
   return `
-    <div style="position: relative; width: ${svgWidth}px; height: ${svgHeight + 20}px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+    <div style="position: relative; width: ${svgWidth}px; height: ${svgHeight + 16}px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
       <!-- Pulsing Radar Ripple for Live GPS -->
       ${
         isLiveGps
-          ? `<div style="position: absolute; top: 10px; width: 50px; height: 50px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); pointer-events: none; animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
+          ? `<div style="position: absolute; top: 4px; width: 38px; height: 38px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); pointer-events: none; animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
           : ''
       }
 
@@ -175,7 +174,7 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
         height: ${svgHeight}px;
         transform: rotate(${heading}deg);
         transition: transform 0.4s ease-out;
-        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.35));
         pointer-events: none;
       ">
         <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 38 58" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -219,22 +218,22 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
         </svg>
       </div>
 
-      <!-- PickMe / Uber Style Telemetry Badge -->
+      <!-- Real-Time Telemetry Badge -->
       <div style="
-        margin-top: 3px;
+        margin-top: 2.5px;
         background: ${hasFridge ? 'rgba(14, 165, 233, 0.95)' : 'rgba(15, 23, 42, 0.92)'};
         color: #ffffff;
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 700;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        padding: 2px 5px;
-        border-radius: 4px;
+        padding: 1.5px 4px;
+        border-radius: 3px;
         white-space: nowrap;
         border: 1px solid rgba(255,255,255,0.25);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3);
         display: flex;
         align-items: center;
-        gap: 3px;
+        gap: 2px;
       ">
         ${hasFridge ? '<span style="color: #e0f2fe;">❄</span>' : ''}
         <span>${code}</span>

@@ -28,7 +28,7 @@ All seeded demonstration accounts use the verified password: `Waypoint2026!`
 | **Delivery Driver** | `driver@waypoint.test` <br/>`driver@waypoint.knurdz.org` | `Waypoint2026!` | Route manifest, real time GPS beacon, offline touch POD | `/driver/route` |
 | **Store Manager** | `store@waypoint.test` <br/>`store@waypoint.knurdz.org` | `Waypoint2026!` | Daily order placement, 16:00 cutoff alerts, receipt sign off | `/store` |
 
-*Note: The login screen also features 1 click role selector profile cards to load assigned credentials instantly for rapid evaluation.*
+*Note: The login screen provides a standard enterprise sign-in interface. Evaluators can authenticate using any seeded account above.*
 
 ---
 
@@ -93,7 +93,7 @@ Follow this 6 step end to end workflow to test the complete logistics lifecycle:
 3. Tap **Capture POD** on Stop 1 (`/driver/pod`), capture a digital touch signature and photo POD, and confirm delivery.
 4. Notice that Stop 1 updates to **Delivered**, and delivery completion timestamps are written to PostgreSQL.
 
-### Step 5: Real Time Sri Lankan Fleet Map (PickMe / Uber Precision)
+### Step 5: Real Time Sri Lankan Fleet Map (High-Precision Telemetry)
 1. Return to the Dispatcher portal and navigate to **Fleet Map** (`/dispatcher/map`).
 2. Inspect the interactive Leaflet map centered on Sri Lanka's Western and Central transport corridors.
 3. Observe active vehicles with directional heading arrows and speed tags.
@@ -108,7 +108,7 @@ Follow this 6 step end to end workflow to test the complete logistics lifecycle:
 
 ## 3. Real Time GPS Telemetry & Predictive Routing Engine
 
-To deliver high fidelity operational visibility similar to PickMe and Uber, Waypoint features a hybrid telemetry engine:
+To deliver enterprise-grade operational visibility across Sri Lanka's transport network, Waypoint features a hybrid telemetry engine:
 
 1. **Active Driver Browser GPS**:
    When drivers access `/driver/route`, the application utilizes `navigator.geolocation.watchPosition` to sample high accuracy latitude, longitude, heading, and speed, streaming updates to `/api/driver/telemetry`. Vehicles reporting active telemetry display a `LIVE SATELLITE GPS` badge with real time radar ripples.
@@ -133,7 +133,7 @@ During the transition from the Day 5 Designathon specification to production dep
 * **Automated Cold Boot Orchestration (`db_init`)**:
   Introduced a dedicated migration container in `docker-compose.yml` that handles schema creation and CSV master data seeding automatically on `docker compose up`, eliminating manual setup steps on clean evaluator machines.
 
-* **Dual Mode Interactive Fleet Cartography (PickMe / Uber Style)**:
+* **Dual Mode Interactive Fleet Cartography**:
   Enhanced the dispatcher map with an interactive Leaflet mapping engine featuring OpenStreetMap tiles (zero external API keys or billing required), custom top-down vehicle silhouettes distinguishing delivery Vans from dual-axle commercial Trucks, distinct Icy Blue liveries with snowflake condenser icons for refrigerated vehicles (Blue Van / Blue Truck), 3-tier load level gauges (Empty, Half Load, Full Load), dynamic heading rotation, and real-time radar ping ripples for live GPS fixes. Filter pills allow dispatchers to instantly segment the fleet by chassis, refrigeration type, and cargo fill level.
 
 * **Offline First Resilience & Conflict Reconciliation**:

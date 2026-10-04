@@ -79,7 +79,7 @@ We selected **Caddy 2** over Nginx for production edge termination on our Azure 
 ### 3.2 Application & BFF Tier (Next.js 16 Standalone)
 The presentation layer and Backend-For-Frontend (BFF) run within a single Next.js 16 standalone container.
 * **Role-Based Portals**:
-  1. `/dispatcher`: Real-time fleet board, PickMe/Uber style map, manual trip overrides, and cold-chain temperature telemetry.
+  1. `/dispatcher`: Real-time fleet board, interactive geographic fleet map, manual trip overrides, and cold-chain temperature telemetry.
   2. `/loader`: Bay assignments, volumetric capacity meters, and reverse-LIFO staging checklists.
   3. `/driver/route`: Mobile-first 390px responsive viewport, turn-by-turn stop sequences, touch signature pad, photo capture, and Serwist service worker.
   4. `/store`: Outlet inventory ordering, 16:00 cutoff alerts, and discrepancy dispute logging.
@@ -143,7 +143,7 @@ Route scheduling and vehicle packing are delegated to a dedicated Python 3.12 mi
 * **Decision**: Utilize Leaflet with standard OpenStreetMap raster tiles (zero API key required) and custom SVG vehicle silhouettes rather than Google Maps or Mapbox APIs.
 * **Rationale**:
   * Eliminates external API key billing exposure, per-tile costs, and unexpected third-party rate limiting during evaluation.
-  * Allows custom rendering of PickMe / Uber style top-down vehicle silhouettes (distinguishing vans vs heavy trucks, blue reefer condenser badges, and 3-tier cargo load gauges).
+  * Allows custom rendering of top-down vehicle silhouettes (distinguishing vans vs heavy trucks, blue reefer condenser badges, and 3-tier cargo load gauges).
 * **Trade-off**: Vector route polylines are rendered from pre-computed coordinate sequences rather than dynamically calculated by a live turn-by-turn routing cloud API.
 
 ---
