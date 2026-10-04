@@ -8,37 +8,32 @@ interface AgentContextType {
   isLive: boolean;
   agentStatus: string;
   isDrawerOpen: boolean;
-  isRadioActive: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
   toggleLive: () => void;
   setLive: (live: boolean, status?: string) => void;
-  toggleRadio: () => void;
-  broadcastRadioAlert: (text: string) => void;
 }
 
 const AgentContext = createContext<AgentContextType | null>(null);
 
 const AGENT_LIVE_KEY = 'wp-agent-live';
 const AGENT_STATUS_KEY = 'wp-agent-status';
-const RADIO_ACTIVE_KEY = 'wp-radio-active';
+
 
 export function AgentProvider({ children }: { children: React.ReactNode }) {
   const [isLive, setIsLiveState] = useState(false);
   const [agentStatus, setAgentStatusState] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isRadioActive, setIsRadioActiveState] = useState(false);
+
 
   // Initialize from session storage on mount
   useEffect(() => {
     try {
       const storedLive = sessionStorage.getItem(AGENT_LIVE_KEY) === 'true';
       const storedStatus = sessionStorage.getItem(AGENT_STATUS_KEY) || '';
-      const storedRadio = sessionStorage.getItem(RADIO_ACTIVE_KEY) === 'true';
       setIsLiveState(storedLive);
       setAgentStatusState(storedStatus);
-      setIsRadioActiveState(storedRadio);
       if (storedLive) {
         document.body.classList.add('wp-agent-live');
       }
@@ -72,31 +67,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
 
-  const toggleRadio = useCallback(() => {
-    setIsRadioActiveState((prev) => {
-      const next = !prev;
-      try {
-        if (next) {
-          sessionStorage.setItem(RADIO_ACTIVE_KEY, 'true');
-        } else {
-          sessionStorage.removeItem(RADIO_ACTIVE_KEY);
-        }
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
 
-  const broadcastRadioAlert = useCallback((text: string) => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('waypoint:broadcast_alert', {
-          detail: { text, priority: 'critical' },
-        })
-      );
-    }
-  }, []);
 
   const setLive = useCallback((live: boolean, status?: string) => {
     setIsLiveState(live);
@@ -141,14 +112,11 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         isLive,
         agentStatus,
         isDrawerOpen,
-        isRadioActive,
         openDrawer,
         closeDrawer,
         toggleDrawer,
         toggleLive,
         setLive,
-        toggleRadio,
-        broadcastRadioAlert,
       }}
     >
       {children}
@@ -184,14 +152,11 @@ const DEFAULT_AGENT_CONTEXT: AgentContextType = {
   isLive: false,
   agentStatus: '',
   isDrawerOpen: false,
-  isRadioActive: false,
   openDrawer: () => {},
   closeDrawer: () => {},
   toggleDrawer: () => {},
   toggleLive: () => {},
   setLive: () => {},
-  toggleRadio: () => {},
-  broadcastRadioAlert: () => {},
 };
 
 export function useAgent() {
