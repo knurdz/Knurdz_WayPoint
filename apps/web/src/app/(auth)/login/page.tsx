@@ -4,111 +4,25 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Users,
-  Check,
-  Home,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  LayoutGrid,
   PackageCheck,
   Truck,
   Store,
-  MousePointerClick,
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  ArrowRight,
-  LayoutGrid,
 } from 'lucide-react';
-
-interface Persona {
-  id: 'dispatcher' | 'loader' | 'driver' | 'store';
-  role: string;
-  name: string;
-  initials: string;
-  avatarClass: string;
-  dest: string;
-  destIcon: React.ComponentType<{ size?: number; className?: string }>;
-  scope: string;
-  email: string;
-  redirectUrl: string;
-}
-
-const PERSONAS: Persona[] = [
-  {
-    id: 'dispatcher',
-    role: 'Dispatcher',
-    name: 'Nimal Perera',
-    initials: 'NP',
-    avatarClass: 'persona-disp',
-    dest: 'Mission Control',
-    destIcon: Home,
-    scope: 'HQ · 142 Orders',
-    email: 'dispatcher@waypoint.test',
-    redirectUrl: '/dispatcher',
-  },
-  {
-    id: 'loader',
-    role: 'Warehouse Loader',
-    name: 'Priya Fernando',
-    initials: 'PF',
-    avatarClass: 'persona-load',
-    dest: 'Warehouse Dock',
-    destIcon: PackageCheck,
-    scope: 'Dock 04 · LIFO',
-    email: 'loader@waypoint.test',
-    redirectUrl: '/loader',
-  },
-  {
-    id: 'driver',
-    role: 'Delivery Driver',
-    name: 'Kamal Silva',
-    initials: 'KS',
-    avatarClass: 'persona-drv',
-    dest: 'Driver Route',
-    destIcon: Truck,
-    scope: 'VEH037 · POD',
-    email: 'driver@waypoint.test',
-    redirectUrl: '/driver/route',
-  },
-  {
-    id: 'store',
-    role: 'Store Manager',
-    name: 'Anjali Jayawardena',
-    initials: 'AJ',
-    avatarClass: 'persona-store',
-    dest: 'Store Portal',
-    destIcon: Store,
-    scope: 'OUT001 Galle Rd',
-    email: 'store@waypoint.test',
-    redirectUrl: '/store',
-  },
-];
-
 
 export default function LoginPage() {
   const router = useRouter();
-  const [selectedPersona, setSelectedPersona] = useState<Persona>(PERSONAS[0]);
-  const [email, setEmail] = useState<string>(PERSONAS[0].email);
-  const [password, setPassword] = useState('REDACTED');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSelectPersona = (p: Persona) => {
-    setSelectedPersona(p);
-    setEmail(p.email);
-    setPassword('REDACTED');
-    setError(null);
-  };
-
-  const handlePersonaDoubleClick = async (p: Persona) => {
-    setSelectedPersona(p);
-    setEmail(p.email);
-    setPassword('REDACTED');
-    setError(null);
-    await executeLogin(p.email, 'REDACTED', p.redirectUrl);
-  };
-
-  const executeLogin = async (loginEmail: string, loginPass: string, redirectTarget?: string) => {
+  const executeLogin = async (loginEmail: string, loginPass: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -120,10 +34,10 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || 'Invalid email or password');
       }
 
-      router.push(redirectTarget || data.redirectUrl || '/dispatcher');
+      router.push(data.redirectUrl || '/dispatcher');
       router.refresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unable to connect to authentication server';
@@ -135,7 +49,7 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    executeLogin(email, password, selectedPersona.redirectUrl);
+    executeLogin(email, password);
   };
 
   return (
@@ -155,9 +69,8 @@ export default function LoginPage() {
           <div className="wp-login-card">
             <h2>Sign In</h2>
             <p className="wp-login-subtitle">
-              Select a seeded enterprise role or enter credentials below:
+              Enter your enterprise credentials to access the logistics portal:
             </p>
-
 
             {error && (
               <div
@@ -174,81 +87,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* 4 Personas Selector */}
-            <div className="wp-persona-selector-wrap">
-              <div className="wp-persona-selector-header">
-                <span className="wp-persona-selector-title">
-                  <Users size={14} style={{ color: 'var(--wp-primary)' }} />
-                  <span>Enterprise Role Directory</span>
-                </span>
-                <span className="wp-persona-badge">Verified Roles</span>
-              </div>
-              <p className="wp-persona-selector-desc">
-                Select a role profile to load assigned credentials, or double click to authenticate directly:
-              </p>
-
-              <div className="wp-persona-grid" role="radiogroup" aria-label="Enterprise Roles">
-                {PERSONAS.map((p) => {
-                  const isActive = selectedPersona.id === p.id;
-                  const DestIcon = p.destIcon;
-
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={`wp-persona-card ${isActive ? 'is-active' : ''}`}
-                      role="radio"
-                      aria-checked={isActive}
-                      tabIndex={0}
-                      onClick={() => handleSelectPersona(p)}
-                      onDoubleClick={() => handlePersonaDoubleClick(p)}
-                    >
-                      <div className="wp-persona-card-header">
-                        <span className={`wp-avatar wp-persona-avatar ${p.avatarClass}`}>
-                          {p.initials}
-                        </span>
-                        <div className="wp-persona-meta">
-                          <div className="wp-persona-role">{p.role}</div>
-                          <div className="wp-persona-name">{p.name}</div>
-                        </div>
-                        <span className="wp-persona-check" aria-hidden="true">
-                          <Check size={13} />
-                        </span>
-                      </div>
-                      <div className="wp-persona-card-footer">
-                        <span className="wp-persona-dest">
-                          <DestIcon size={12} /> {p.dest}
-                        </span>
-                        <span className="wp-persona-scope">{p.scope}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="wp-persona-hint">
-                <span>
-                  <MousePointerClick size={12} style={{ display: 'inline', marginRight: 4 }} />
-                  Click to select profile · Double click to launch
-                </span>
-                <span className="font-mono">Quick Access</span>
-              </div>
-            </div>
-
-            <div className="wp-login-divider">
-              <span>or sign in with credentials</span>
-            </div>
-
             <form className="wp-login-form" onSubmit={handleSubmit}>
               <div className="wp-login-field">
                 <label className="wp-label" htmlFor="email">
-                  Email
+                  Email Address
                 </label>
                 <input
                   className="wp-input"
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="e.g. dispatcher@waypoint.test"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="username"
@@ -265,6 +113,7 @@ export default function LoginPage() {
                     className="wp-input"
                     id="password"
                     type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
@@ -278,17 +127,6 @@ export default function LoginPage() {
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
-                </div>
-              </div>
-
-              {/* Dynamic Persona Destination Notice */}
-              <div className="wp-persona-banner">
-                <span className="wp-persona-banner-icon">
-                  <ShieldCheck size={16} />
-                </span>
-                <div className="wp-persona-banner-text">
-                  Signing in as <strong>{selectedPersona.name}</strong> ({selectedPersona.role}) → Redirects to{' '}
-                  <span className="wp-persona-banner-dest">{selectedPersona.dest}</span>
                 </div>
               </div>
 
@@ -311,7 +149,7 @@ export default function LoginPage() {
                 className="wp-btn wp-btn-primary wp-login-submit"
                 disabled={loading}
               >
-                <span>{loading ? 'Signing in...' : `Sign in as ${selectedPersona.role}`}</span>
+                <span>{loading ? 'Signing in...' : 'Sign In'}</span>
                 <ArrowRight size={16} />
               </button>
             </form>
