@@ -30,16 +30,7 @@ export default function DispatcherLiveMapPage() {
     loadMapData();
   }, [loadMapData]);
 
-  // Listen to chaos simulator disruptions to update map telemetry in real time
-  useEffect(() => {
-    const handleChaos = () => {
-      loadMapData();
-    };
-    window.addEventListener('waypoint:chaos_triggered', handleChaos);
-    return () => {
-      window.removeEventListener('waypoint:chaos_triggered', handleChaos);
-    };
-  }, [loadMapData]);
+
 
   const selectedVeh = vehicles.find((v) => v.id === selectedId) || vehicles[0];
 
