@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-waypoint_secret_2026}
       POSTGRES_DB: ${POSTGRES_DB:-waypoint_logistics}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -52,7 +52,7 @@ services:
       PORT: 8000
       ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -66,10 +66,26 @@ services:
           cpus: '1.0'
           memory: 512M
 
+  db_init:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      target: migrate
+    container_name: waypoint_db_init
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-waypoint}:${POSTGRES_PASSWORD:-waypoint_secret_2026}@postgres:5432/${POSTGRES_DB:-waypoint_logistics}?schema=public
+      DEFAULT_USER_PASSWORD: ${DEFAULT_USER_PASSWORD:-REDACTED}
+      DATA_DIR: /app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   web:
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+      target: runner
     container_name: waypoint_web
     restart: unless-stopped
     environment:
@@ -77,15 +93,23 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-waypoint}:${POSTGRES_PASSWORD:-waypoint_secret_2026}@postgres:5432/${POSTGRES_DB:-waypoint_logistics}?schema=public
       REDIS_URL: redis://redis:6379
       OPTIMIZER_URL: http://optimizer:8000
-      JWT_SECRET: ${JWT_SECRET:-waypoint_jwt_super_secure_2026_key}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost}
+      JWT_SECRET: ${JWT_SECRET:-waypoint_jwt_super_secure_2026_random_key_change_in_production}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     volumes:
       - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
+      db_init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       optimizer:
@@ -103,12 +127,15 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-http://localhost}
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     deploy:
       resources:
         limits:
