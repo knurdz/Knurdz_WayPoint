@@ -95,7 +95,7 @@ export default function DispatcherLiveMapPage() {
               : 'Fleet Live Map'}
           </h1>
           <p className="wp-subtext">
-            PickMe / Uber precision telemetry · Satellite GPS & predictive route interpolation
+            Real-time GPS telemetry & predictive route interpolation across Sri Lanka
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>

@@ -141,7 +141,7 @@ export default function SriLankaFleetMap({
         const isSelected = v.id === selectedVehicleId;
         const isLive = v.telemetrySource === 'LIVE_GPS';
 
-        // PickMe / Uber style top-down vehicle SVG icon
+        // Top-down vehicle SVG marker with live telemetry
         const vehicleSvgHtml = createVehicleSvg({
           code: v.code,
           chassis: v.chassis,
@@ -154,8 +154,8 @@ export default function SriLankaFleetMap({
           isLiveGps: isLive,
         });
 
-        const iconWidth = v.chassis.includes('truck') ? 48 : 42;
-        const iconHeight = v.chassis.includes('truck') ? 94 : 78;
+        const iconWidth = v.chassis.includes('truck') ? 36 : 30;
+        const iconHeight = v.chassis.includes('truck') ? 74 : 62;
 
         const icon = L.divIcon({
           className: 'wp-fleet-vehicle-icon',
@@ -181,7 +181,7 @@ export default function SriLankaFleetMap({
             <div><strong>Driver:</strong> ${v.driverName}</div>
             <div><strong>Chassis:</strong> ${v.chassisLabel} ${v.hasFridge ? '<span style="color: #0284c7; font-weight: 700;">(Blue Reefer ❄)</span>' : ''}</div>
             <div><strong>Load Status:</strong> <span style="font-weight: 700; text-transform: uppercase; color: ${v.loadStatus === 'full' ? '#ef4444' : v.loadStatus === 'half' ? '#f59e0b' : '#64748b'};">${v.loadStatus ?? 'HALF'} LOAD</span> (${v.loadPct ?? 50}% · ${v.weightKg ?? 1500}kg / ${v.maxWeightKg ?? 2000}kg)</div>
-            <div><strong>PickMe Speed:</strong> ${v.speedKmH} km/h · Heading ${v.heading || 0}°</div>
+            <div><strong>Speed:</strong> ${v.speedKmH} km/h · Heading ${v.heading || 0}°</div>
             <div><strong>Progress:</strong> ${v.completedStops}/${v.totalStops} stops completed</div>
             ${
               v.chilledTempC !== undefined
@@ -254,7 +254,7 @@ export default function SriLankaFleetMap({
     <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '520px' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: '520px', borderRadius: '8px' }} />
 
-      {/* Top Left: PickMe / Uber Map Filter Controls */}
+      {/* Top Left: Fleet Map Filter Controls */}
       <div
         ref={controlsRef}
         style={{
@@ -441,7 +441,7 @@ export default function SriLankaFleetMap({
           }}
         />
         <span style={{ fontWeight: 600, color: '#1e293b' }}>
-          PickMe / Uber Live Fleet Telematics
+          Live Fleet Telematics & GPS Beacons
         </span>
       </div>
     </div>
