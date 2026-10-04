@@ -349,6 +349,84 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     [voiceProvider, stopAllPlayback, speakWithBrowser]
   );
 
+  const [isRadioActive, setIsRadioActive] = useState(false);
+
+  const playRadioChime = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      type AudioContextCtor = new () => AudioContext;
+      const win = window as unknown as { AudioContext?: AudioContextCtor; webkitAudioContext?: AudioContextCtor };
+      const Ctor = win.AudioContext || win.webkitAudioContext;
+      if (!Ctor) return;
+      const ctx = new Ctor();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      const now = ctx.currentTime;
+
+      // Tone 1: High alert beep 880Hz
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now);
+      gain1.gain.setValueAtTime(0.12, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.12);
+
+      // Tone 2: Low alert tone 440Hz
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(440, now + 0.12);
+      gain2.gain.setValueAtTime(0.15, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.32);
+
+      await new Promise((resolve) => setTimeout(resolve, 340));
+    } catch {
+      // AudioContext unavailable
+    }
+  }, []);
+
+  const broadcastAlert = useCallback(
+    async (alertText: string) => {
+      if (isSpeakingRef.current) {
+        stopAllPlayback();
+      }
+      await playRadioChime();
+      await speak(alertText);
+    },
+    [playRadioChime, speak, stopAllPlayback]
+  );
+
+  const toggleRadio = useCallback(() => {
+    setIsRadioActive((prev) => !prev);
+  }, []);
+
+  // Window event listener for broadcast alerts
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleBroadcastEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text: string }>;
+      if (customEvent.detail && customEvent.detail.text) {
+        if (isRadioActive) {
+          broadcastAlert(customEvent.detail.text);
+        }
+      }
+    };
+
+    window.addEventListener('waypoint:broadcast_alert', handleBroadcastEvent);
+    return () => {
+      window.removeEventListener('waypoint:broadcast_alert', handleBroadcastEvent);
+    };
+  }, [isRadioActive, broadcastAlert]);
+
   const toggleDuplexMode = useCallback(() => {
     setDuplexMode((prev) => (prev === 'full_duplex' ? 'half_duplex' : 'full_duplex'));
   }, []);
@@ -364,6 +442,7 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     isSpeaking,
     isUserSpeaking,
     isInterrupted,
+    isRadioActive,
     audioLevel,
     isSupported,
     error,
@@ -371,6 +450,10 @@ export function useFullDuplexVoice(options: UseFullDuplexVoiceOptions = {}) {
     stopSession,
     speak,
     cancelSpeech: stopAllPlayback,
+    broadcastAlert,
+    playRadioChime,
+    toggleRadio,
+    setIsRadioActive,
     toggleDuplexMode,
     toggleVoiceProvider,
     setDuplexMode,

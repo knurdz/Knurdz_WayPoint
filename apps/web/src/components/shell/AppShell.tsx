@@ -7,6 +7,7 @@ import CopilotModal from '../copilot/CopilotModal';
 import { useCopilot } from '../../hooks/useCopilot';
 import { ToastProvider } from '../ui/Toast';
 import { AgentProvider } from '../agent/AgentContext';
+import EngineeringHUD from './EngineeringHUD';
 
 interface AppShellProps {
   role?: 'dispatcher' | 'loader' | 'driver' | 'store';
@@ -69,6 +70,7 @@ export default function AppShell({
             </main>
           </div>
           <CopilotModal isOpen={isOpen} onClose={closeCopilot} />
+          <EngineeringHUD />
         </div>
       </AgentProvider>
     </ToastProvider>

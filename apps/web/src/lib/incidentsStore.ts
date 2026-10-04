@@ -81,3 +81,15 @@ export function addIncident(incident: ExceptionIncident) {
     // Ingestion fallback
   }
 }
+
+export function resetChaosIncidents() {
+  const indicesToRemove: number[] = [];
+  GLOBAL_INCIDENTS.forEach((item, index) => {
+    if (item.id.startsWith('inc_chaos_')) {
+      indicesToRemove.push(index);
+    }
+  });
+  for (let i = indicesToRemove.length - 1; i >= 0; i--) {
+    GLOBAL_INCIDENTS.splice(indicesToRemove[i], 1);
+  }
+}
