@@ -139,7 +139,7 @@ Route scheduling and vehicle packing are delegated to a dedicated Python 3.12 mi
 
 ### ADR-004: Client-Side Leaflet + Custom SVG Cartography vs. Commercial Map APIs
 * **Context**: Real-time fleet tracking requires visualizing delivery vehicles across Sri Lanka with distinct chassis types, refrigeration liveries, and cargo fill levels.
-* **Decision**: Utilize Leaflet with CartoDB Voyager tiles and custom SVG vehicle silhouettes rather than Google Maps or Mapbox APIs.
+* **Decision**: Utilize Leaflet with standard OpenStreetMap raster tiles (zero API key required) and custom SVG vehicle silhouettes rather than Google Maps or Mapbox APIs.
 * **Rationale**:
   * Eliminates external API key billing exposure, per-tile costs, and unexpected third-party rate limiting during evaluation.
   * Allows custom rendering of PickMe / Uber style top-down vehicle silhouettes (distinguishing vans vs heavy trucks, blue reefer condenser badges, and 3-tier cargo load gauges).
