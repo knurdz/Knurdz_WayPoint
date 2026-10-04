@@ -199,6 +199,35 @@ export default function AgentChatInterface({
     }
   }, [messages, showWelcome, isInterrupted, expandedRAGMsgId]);
 
+  // Append autonomous radio bulletins into message thread
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleBroadcast = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text: string }>;
+      if (customEvent.detail && customEvent.detail.text) {
+        setShowWelcome(false);
+        const time = new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `radio_${Date.now()}`,
+            sender: 'agent',
+            text: `[RADIO BROADCAST] ${customEvent.detail.text}`,
+            time,
+            fromVoice: true,
+          },
+        ]);
+      }
+    };
+    window.addEventListener('waypoint:broadcast_alert', handleBroadcast);
+    return () => {
+      window.removeEventListener('waypoint:broadcast_alert', handleBroadcast);
+    };
+  }, []);
+
   const handleMicToggle = async () => {
     if (isDegraded || !voiceSupported) return;
 

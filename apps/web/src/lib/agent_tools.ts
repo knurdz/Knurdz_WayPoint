@@ -528,3 +528,20 @@ export function executeVoiceTool(query: string): {
 
   return { matched: false };
 }
+
+export function resetTelemetryState(): void {
+  if (IN_MEMORY_FLEET_TELEMETRY.TRK001) {
+    IN_MEMORY_FLEET_TELEMETRY.TRK001.speedKmH = 48;
+    IN_MEMORY_FLEET_TELEMETRY.TRK001.location = 'Peliyagoda Expressway Corridor';
+  }
+  if (IN_MEMORY_FLEET_TELEMETRY.TRK002) {
+    IN_MEMORY_FLEET_TELEMETRY.TRK002.speedKmH = 34;
+    IN_MEMORY_FLEET_TELEMETRY.TRK002.location = 'Kandy Road Kadawatha';
+    IN_MEMORY_FLEET_TELEMETRY.TRK002.chilledTempC = 3.4;
+    IN_MEMORY_FLEET_TELEMETRY.TRK002.coldChainStatus = 'nominal';
+  }
+  const removeIndex = IN_MEMORY_COLD_CHAIN_ALERTS.findIndex((a) => a.vehicleId === 'TRK002');
+  if (removeIndex !== -1) {
+    IN_MEMORY_COLD_CHAIN_ALERTS.splice(removeIndex, 1);
+  }
+}

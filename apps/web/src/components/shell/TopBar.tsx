@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   MessageSquare,
   AudioWaveform,
+  Radio,
+  Flame,
 } from 'lucide-react';
 import { useAgent } from '../agent/AgentContext';
 
@@ -68,7 +70,14 @@ export default function TopBar({
   onToggleSidebar,
 }: TopBarProps) {
   const pathname = usePathname() || '';
-  const { isLive, toggleLive, openDrawer } = useAgent();
+  const {
+    isLive,
+    toggleLive,
+    openDrawer,
+    isRadioActive,
+    toggleRadio,
+    toggleSimulator,
+  } = useAgent();
 
   const displayTitle = title || TITLE_MAP[pathname] || 'Mission Control';
 
@@ -102,6 +111,49 @@ export default function TopBar({
 
       <div className="wp-topbar-right">
         <div className="wp-agent-controls">
+          {/* Chaos Simulator Trigger */}
+          <button
+            type="button"
+            onClick={toggleSimulator}
+            className="wp-btn wp-btn-outline"
+            style={{
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.72rem',
+              borderColor: '#f97316',
+              color: '#ea580c',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+            aria-label="Open Chaos and Stress Simulator"
+            title="Evaluator God Mode: Open Chaos Simulator"
+          >
+            <Flame size={13} color="#ea580c" />
+            <span>Chaos Mode</span>
+          </button>
+
+          {/* Proactive Radio Dispatch Stream Toggle */}
+          <button
+            type="button"
+            onClick={toggleRadio}
+            className={`wp-btn wp-btn-outline ${isRadioActive ? 'is-active' : ''}`}
+            style={{
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.72rem',
+              borderColor: isRadioActive ? 'var(--wp-success, #22c55e)' : undefined,
+              color: isRadioActive ? '#15803d' : undefined,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+            aria-pressed={isRadioActive}
+            aria-label={isRadioActive ? 'Mute Radio Dispatch Stream' : 'Activate Radio Dispatch Stream'}
+            title={isRadioActive ? 'Radio stream broadcasting: click to mute' : 'Activate autonomous radio broadcast stream'}
+          >
+            <Radio size={13} />
+            <span>{isRadioActive ? 'Radio ON' : 'Radio'}</span>
+          </button>
+
           <button
             type="button"
             onClick={openDrawer}
