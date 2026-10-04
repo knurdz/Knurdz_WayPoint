@@ -36,6 +36,11 @@ export interface MapVehicle {
   chilledTempC?: number;
   frozenTempC?: number;
   coldChainStatus: 'nominal' | 'warning' | 'breach';
+  hasFridge: boolean;
+  loadStatus: 'empty' | 'half' | 'full';
+  loadPct: number;
+  weightKg: number;
+  maxWeightKg: number;
   breadcrumbs: MapBreadcrumb[];
   stops: {
     stopNumber: number;
@@ -224,6 +229,24 @@ export async function GET() {
         ? `Kandy Central Corridor (${pos.lat.toFixed(4)}° N, ${pos.lng.toFixed(4)}° E)`
         : `Colombo Coastal Corridor (${pos.lat.toFixed(4)}° N, ${pos.lng.toFixed(4)}° E)`;
 
+      const hasFridge = meta.chassis.includes('freezer');
+
+      // Calculate total weight and load percentage
+      const totalWeightKg = trip?.stops.reduce((sum, s) => {
+        const orderWeight = s.order?.weightKg || 0;
+        return sum + orderWeight;
+      }, 0) || (vId === 'VEH004' ? 3850 : vId === 'VEH037' ? 1420 : vId === 'VEH001' ? 4200 : vId === 'VEH002' ? 1200 : vId === 'VEH003' ? 2100 : 0);
+
+      const maxWeightKg = meta.chassis.includes('truck') ? 5000 : 2000;
+      const rawPct = Math.min(100, Math.round((totalWeightKg / maxWeightKg) * 100));
+      // Adjust remaining load based on completed stops
+      const remainingPct = totalStops > 0 
+        ? Math.round(rawPct * ((totalStops - completedStops) / totalStops))
+        : rawPct;
+
+      const loadStatus: 'empty' | 'half' | 'full' =
+        remainingPct <= 15 ? 'empty' : remainingPct <= 70 ? 'half' : 'full';
+
       return {
         id: vId,
         name: vId,
@@ -232,6 +255,11 @@ export async function GET() {
         routeId: trip?.tripId || `R0252${vId.replace('VEH', '')}`,
         chassis: meta.chassis,
         chassisLabel: meta.chassisLabel,
+        hasFridge,
+        loadStatus,
+        loadPct: remainingPct,
+        weightKg: Math.round(maxWeightKg * (remainingPct / 100)),
+        maxWeightKg,
         markerType: meta.chassis.includes('truck') ? 'rect' : 'circle',
         color: pos.isLive ? '#10b981' : meta.color,
         lat: pos.lat,

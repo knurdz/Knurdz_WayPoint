@@ -128,8 +128,8 @@ During the transition from the Day 5 Designathon specification to production dep
 * **Automated Cold Boot Orchestration (`db_init`)**:
   Introduced a dedicated migration container in `docker-compose.yml` that handles schema creation and CSV master data seeding automatically on `docker compose up`, eliminating manual setup steps on clean evaluator machines.
 
-* **Dual Mode Interactive Fleet Cartography**:
-  Enhanced the dispatcher map with an interactive Leaflet mapping engine featuring CartoDB Voyager tiles, custom directional SVG vehicle markers, route polylines, and dynamic auto panning.
+* **Dual Mode Interactive Fleet Cartography (PickMe / Uber Style)**:
+  Enhanced the dispatcher map with an interactive Leaflet mapping engine featuring CartoDB Voyager tiles, custom top-down vehicle silhouettes distinguishing delivery Vans from dual-axle commercial Trucks, distinct Icy Blue liveries with snowflake condenser icons for refrigerated vehicles (Blue Van / Blue Truck), 3-tier load level gauges (Empty, Half Load, Full Load), dynamic heading rotation, and real-time radar ping ripples for live GPS fixes. Filter pills allow dispatchers to instantly segment the fleet by chassis, refrigeration type, and cargo fill level.
 
 * **Offline First Resilience & Conflict Reconciliation**:
   Equipped mobile views with Serwist service worker precaching and IndexedDB mutation queues, enabling drivers to complete deliveries and capture signatures in offline basement loading docks. Upon reconnection, an automated reconciliation algorithm resolves discrepancies against central records.

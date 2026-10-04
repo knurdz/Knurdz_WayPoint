@@ -340,10 +340,47 @@ export default function DispatcherLiveMapPage() {
                     {markerLetter}
                   </span>
                   <span style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                       <strong className="font-mono" style={{ fontSize: '0.8rem' }}>
                         {v.name}
                       </strong>
+                      {v.hasFridge && (
+                        <span
+                          style={{
+                            fontSize: '0.62rem',
+                            padding: '0.1rem 0.35rem',
+                            borderRadius: '4px',
+                            background: '#e0f2fe',
+                            color: '#0284c7',
+                            fontWeight: 700,
+                          }}
+                        >
+                          ❄ Blue Reefer
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          fontSize: '0.62rem',
+                          padding: '0.1rem 0.35rem',
+                          borderRadius: '4px',
+                          background:
+                            v.loadStatus === 'full'
+                              ? '#fee2e2'
+                              : v.loadStatus === 'half'
+                              ? '#fef3c7'
+                              : '#f1f5f9',
+                          color:
+                            v.loadStatus === 'full'
+                              ? '#991b1b'
+                              : v.loadStatus === 'half'
+                              ? '#92400e'
+                              : '#475569',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {v.loadStatus ?? 'HALF'} ({v.loadPct ?? 50}%)
+                      </span>
                       {v.chilledTempC !== undefined && (
                         <span
                           style={{
@@ -439,8 +476,30 @@ export default function DispatcherLiveMapPage() {
                   <span style={{ fontWeight: 600 }}>{selectedVeh.location}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--wp-text-muted)' }}>Speed:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedVeh.speedKmH} km/h</span>
+                  <span style={{ color: 'var(--wp-text-muted)' }}>Speed / Heading:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedVeh.speedKmH} km/h · {selectedVeh.heading || 0}° N</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--wp-text-muted)' }}>Chassis / Fridge:</span>
+                  <span style={{ fontWeight: 600, color: selectedVeh.hasFridge ? '#0284c7' : 'inherit' }}>
+                    {selectedVeh.chassisLabel} {selectedVeh.hasFridge ? '(Blue Reefer ❄)' : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--wp-text-muted)' }}>Load Capacity:</span>
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      color:
+                        selectedVeh.loadStatus === 'full'
+                          ? '#ef4444'
+                          : selectedVeh.loadStatus === 'half'
+                          ? '#f59e0b'
+                          : '#64748b',
+                    }}
+                  >
+                    {(selectedVeh.loadStatus ?? 'HALF').toUpperCase()} ({selectedVeh.loadPct ?? 50}% · {selectedVeh.weightKg ?? 1500}kg / {selectedVeh.maxWeightKg ?? 2000}kg)
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: 'var(--wp-text-muted)' }}>Telemetry Mode:</span>
