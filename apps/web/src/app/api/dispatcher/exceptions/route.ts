@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GLOBAL_INCIDENTS } from '@/lib/incidentsStore';
+import { resolveExceptionSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function GET() {
   const openCount = GLOBAL_INCIDENTS.filter((i) => i.status === 'OPEN').length;
@@ -20,8 +21,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { incidentId, action, note } = body;
+    const validation = await validateRequestBody(req, resolveExceptionSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { incidentId, action, note } = validation.data;
 
     const incident = GLOBAL_INCIDENTS.find((i) => i.id === incidentId);
     if (!incident) {

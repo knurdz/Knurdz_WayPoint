@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@waypoint/database";
 import { resolveSyncConflict, ClientRecord, ServerRecord } from "@/lib/conflict_resolver";
 import { getAuthFromRequest } from "@/lib/auth";
+import { syncBatchSchema, validateRequestBody } from "@/lib/api_schemas";
 
 export async function POST(req: NextRequest) {
   try {
     const auth = await getAuthFromRequest(req);
     const callerId = auth?.userId || auth?.email || "ANONYMOUS_SYNC_CALLER";
-    const body = await req.json();
-    const { pods = [], tempReadings = [], issues = [] } = body;
+    const validation = await validateRequestBody(req, syncBatchSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { pods, tempReadings, issues } = validation.data;
 
     const processedPods: string[] = [];
     const processedTemps: string[] = [];

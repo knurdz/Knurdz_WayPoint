@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate_limiter';
+import { allocateRequestSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
+    const validation = await validateRequestBody(req, allocateRequestSchema, { allowEmptyBody: true });
+    if (!validation.success) {
+      return validation.response;
+    }
+    const body = validation.data;
 
     // Attempt to invoke the python allocation optimization engine if running
     try {

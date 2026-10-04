@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
+import { validateRequestSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const validation = await validateRequestBody(req, validateRequestSchema, { allowEmptyBody: true });
+    if (!validation.success) {
+      return validation.response;
+    }
+    const body = validation.data;
 
     // Attempt to invoke the python validation runner if running
     try {

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { loaderShortfallSchema, validateRequestBody } from "@/lib/api_schemas";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { tripId, qtyShort, productLine, notes, decision } = body;
+    const validation = await validateRequestBody(req, loaderShortfallSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { tripId, qtyShort, productLine, notes, decision } = validation.data;
 
     const incidentId = `INC_${Math.floor(8800 + Math.random() * 1000)}`;
 
