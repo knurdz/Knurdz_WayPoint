@@ -34,6 +34,7 @@ export default function DispatcherLiveMapPage() {
   const [selectedId, setSelectedId] = useState<string>('VEH037');
   const [loading, setLoading] = useState(true);
   const [mapMode, setMapMode] = useState<'geographic' | 'schematic'>('geographic');
+  const [chassisFilter, setChassisFilter] = useState<'all' | 'fridge' | 'van' | 'truck'>('all');
   const { speak, isSpeaking, cancelSpeech } = useFullDuplexVoice();
 
   const loadMapData = useCallback(async (signal?: AbortSignal) => {
@@ -150,9 +151,45 @@ export default function DispatcherLiveMapPage() {
             </button>
           </div>
 
-          <span className="wp-chassis-chip wp-chassis-chip--truck">Dry truck</span>
-          <span className="wp-chassis-chip wp-chassis-chip--truck_freezer">Truck + freezer</span>
-          <span className="wp-chassis-chip wp-chassis-chip--van_freezer">Van + freezer</span>
+          <button
+            type="button"
+            onClick={() => setChassisFilter((prev) => (prev === 'truck' ? 'all' : 'truck'))}
+            className={`wp-chassis-chip wp-chassis-chip--truck ${chassisFilter === 'truck' ? 'active' : ''}`}
+            style={{
+              cursor: 'pointer',
+              border: chassisFilter === 'truck' ? '2px solid #0f172a' : '1px solid transparent',
+              background: chassisFilter === 'truck' ? '#334155' : undefined,
+              color: chassisFilter === 'truck' ? '#ffffff' : undefined,
+            }}
+          >
+            Dry truck
+          </button>
+          <button
+            type="button"
+            onClick={() => setChassisFilter((prev) => (prev === 'fridge' ? 'all' : 'fridge'))}
+            className={`wp-chassis-chip wp-chassis-chip--truck_freezer ${chassisFilter === 'fridge' ? 'active' : ''}`}
+            style={{
+              cursor: 'pointer',
+              border: chassisFilter === 'fridge' ? '2px solid #0284c7' : '1px solid transparent',
+              background: chassisFilter === 'fridge' ? '#0284c7' : undefined,
+              color: chassisFilter === 'fridge' ? '#ffffff' : undefined,
+            }}
+          >
+            ❄ Blue reefer
+          </button>
+          <button
+            type="button"
+            onClick={() => setChassisFilter((prev) => (prev === 'van' ? 'all' : 'van'))}
+            className={`wp-chassis-chip wp-chassis-chip--van_freezer ${chassisFilter === 'van' ? 'active' : ''}`}
+            style={{
+              cursor: 'pointer',
+              border: chassisFilter === 'van' ? '2px solid #10b981' : '1px solid transparent',
+              background: chassisFilter === 'van' ? '#10b981' : undefined,
+              color: chassisFilter === 'van' ? '#ffffff' : undefined,
+            }}
+          >
+            Vans
+          </button>
           <Link
             href="/driver/route"
             className="wp-btn wp-btn-outline"
@@ -178,6 +215,8 @@ export default function DispatcherLiveMapPage() {
               vehicles={vehicles}
               selectedVehicleId={selectedId}
               onSelectVehicle={setSelectedId}
+              activeChassisFilter={chassisFilter}
+              onFilterChange={setChassisFilter}
             />
           ) : (
             <div className="wp-corridor-map" style={{ width: '100%', height: '100%', minHeight: '440px' }}>

@@ -119,6 +119,7 @@ export default function DispatcherAllocationPage() {
   const [selectedVehId, setSelectedVehId] = useState<string>("VEH004");
   const [activeDay, setActiveDay] = useState<"today" | "tomorrow">("today");
   const [isSlotFilled, setIsSlotFilled] = useState<boolean>(false);
+  const [isSlot2Filled, setIsSlot2Filled] = useState<boolean>(false);
   const [isSpecsOpen, setIsSpecsOpen] = useState<boolean>(false);
   const [optimizing, setOptimizing] = useState<boolean>(false);
   const [optResult, setOptResult] = useState<string | null>(null);
@@ -130,6 +131,15 @@ export default function DispatcherAllocationPage() {
     setVehicles((prev) =>
       prev.map((v) =>
         v.id === selectedVehId ? { ...v, fillPct: Math.min(100, v.fillPct + 15), loadedSlots: Math.min(v.maxSlots, v.loadedSlots + 1) } : v
+      )
+    );
+  };
+
+  const handleAssignCargo2 = () => {
+    setIsSlot2Filled(true);
+    setVehicles((prev) =>
+      prev.map((v) =>
+        v.id === selectedVehId ? { ...v, fillPct: Math.min(100, v.fillPct + 12), loadedSlots: Math.min(v.maxSlots, v.loadedSlots + 1) } : v
       )
     );
   };
@@ -544,7 +554,7 @@ export default function DispatcherAllocationPage() {
                   </p>
                 </div>
               </div>
-              <div style={{ marginTop: "0.75rem" }}>
+              <div style={{ marginTop: "0.75rem", marginBottom: "0.5rem" }}>
                 <span className="wp-label" style={{ display: "block", marginBottom: "0.35rem" }}>
                   Departure Window
                 </span>
@@ -552,6 +562,25 @@ export default function DispatcherAllocationPage() {
                   <span>05:30 to 08:00 SLST</span>
                 </div>
               </div>
+
+              <div style={{ marginBottom: "1rem" }}>
+                <span className="wp-label" style={{ display: "block", marginBottom: "0.35rem" }}>
+                  Depot Bay
+                </span>
+                <div className="wp-select-btn">
+                  <span>Peliyagoda Bay 02</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="wp-btn wp-btn-primary"
+                onClick={handleAssignCargo2}
+                disabled={isSlot2Filled}
+                style={{ width: "100%", marginBottom: "0.5rem" }}
+              >
+                {isSlot2Filled ? "Mounted to Active Chassis" : "Assign to Vehicle"}
+              </button>
             </div>
           </aside>
         </div>

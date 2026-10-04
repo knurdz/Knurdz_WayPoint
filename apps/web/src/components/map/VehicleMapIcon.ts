@@ -68,7 +68,7 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
         <!-- Pulsing Radar Ripple for Live GPS -->
         ${
           isLiveGps
-            ? `<div style="position: absolute; top: 14px; width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
+            ? `<div style="position: absolute; top: 14px; width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); pointer-events: none; animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
             : ''
         }
 
@@ -79,6 +79,7 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
           transform: rotate(${heading}deg);
           transition: transform 0.4s ease-out;
           filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+          pointer-events: none;
         ">
           <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 44 72" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Truck Cab (Front) -->
@@ -164,7 +165,7 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
       <!-- Pulsing Radar Ripple for Live GPS -->
       ${
         isLiveGps
-          ? `<div style="position: absolute; top: 10px; width: 50px; height: 50px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
+          ? `<div style="position: absolute; top: 10px; width: 50px; height: 50px; border-radius: 50%; background: rgba(16, 185, 129, 0.28); pointer-events: none; animation: ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>`
           : ''
       }
 
@@ -175,6 +176,7 @@ export function createVehicleSvg(opts: VehicleIconOptions): string {
         transform: rotate(${heading}deg);
         transition: transform 0.4s ease-out;
         filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+        pointer-events: none;
       ">
         <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 38 58" fill="none" xmlns="http://www.w3.org/2000/svg">
           <!-- Aerodynamic Van Chassis -->
