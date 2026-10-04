@@ -29,18 +29,24 @@ export default function DispatcherDeferralPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadDeferrals() {
       try {
-        const res = await fetch("/api/dispatcher/defer");
+        const res = await fetch("/api/dispatcher/defer", { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setStagedOrders(data.staged || []);
         }
-      } catch (err) {
-        console.error("Failed to fetch staged deferrals", err);
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.error("Failed to fetch staged deferrals", err);
+        }
       }
     }
     loadDeferrals();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const hasConsecutiveDebt = stagedOrders.some((o) => o.deferredLastRun);

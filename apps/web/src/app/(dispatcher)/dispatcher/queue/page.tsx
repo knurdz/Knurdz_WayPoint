@@ -11,13 +11,21 @@ export default function OrderQueuePage() {
   const [day, setDay] = useState<'today' | 'tomorrow'>('today');
 
   useEffect(() => {
-    fetch('/api/dispatcher/orders')
+    const controller = new AbortController();
+    fetch('/api/dispatcher/orders', { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         setOrders(data.orders || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err: unknown) => {
+        if ((err as Error)?.name !== 'AbortError') {
+          setLoading(false);
+        }
+      });
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   return (

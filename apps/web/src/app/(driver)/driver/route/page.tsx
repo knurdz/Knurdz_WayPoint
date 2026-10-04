@@ -294,8 +294,8 @@ export default function DriverRoutePage() {
                     <div className="cab-stop-body">
                       {stop.cargo.length > 0 && (
                         <div className="cab-cargo">
-                          {stop.cargo.map((item, idx) => (
-                            <figure key={idx}>
+                          {stop.cargo.map((item) => (
+                            <figure key={`${stop.id}-cargo-${item.name}-${item.sub}`}>
                               <img src={item.img} alt={item.name} />
                               <figcaption>
                                 <strong>{item.name}</strong>

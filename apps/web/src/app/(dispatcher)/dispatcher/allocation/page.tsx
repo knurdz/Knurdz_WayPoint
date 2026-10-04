@@ -242,14 +242,23 @@ export default function DispatcherAllocationPage() {
 
         <div className="wp-fleet-scroll">
           {vehicles.map((v) => (
-            <div
+            <button
+              type="button"
               key={v.id}
               className={`wp-fleet-card ${selectedVehId === v.id ? "active" : ""}`}
               onClick={() => {
                 setSelectedVehId(v.id);
                 setIsSlotFilled(false);
               }}
-              style={{ cursor: "pointer", minWidth: "150px" }}
+              aria-pressed={selectedVehId === v.id}
+              aria-label={`Select chassis ${v.name} (${v.code}), current fill rate ${v.fillPct}%`}
+              style={{
+                cursor: "pointer",
+                minWidth: "150px",
+                textAlign: "left",
+                font: "inherit",
+                color: "inherit",
+              }}
             >
               <div className="wp-flex-between">
                 <span className="font-mono wp-label">{v.code}</span>
@@ -267,7 +276,7 @@ export default function DispatcherAllocationPage() {
                   {v.fillPct}%
                 </span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

@@ -44,20 +44,28 @@ export default function StorePortalPage() {
   const [receiptSuccess, setReceiptSuccess] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadStoreSummary() {
       try {
-        const res = await fetch("/api/store/summary");
+        const res = await fetch("/api/store/summary", { signal: controller.signal });
         if (res.ok) {
           const json = await res.json();
           setData(json);
         }
-      } catch (err) {
-        console.error("Failed to fetch store summary", err);
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.error("Failed to fetch store summary", err);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     loadStoreSummary();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleConfirmReceipt = (deliveryId: string) => {

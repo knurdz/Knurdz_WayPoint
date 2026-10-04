@@ -12,22 +12,30 @@ export default function DispatcherLiveMapPage() {
   const [loading, setLoading] = useState(true);
   const { speak, isSpeaking, cancelSpeech } = useFullDuplexVoice();
 
-  const loadMapData = useCallback(async () => {
+  const loadMapData = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/dispatcher/map');
+      const res = await fetch('/api/dispatcher/map', { signal });
       if (res.ok) {
         const data = await res.json();
         setVehicles(data.vehicles || []);
       }
-    } catch (err) {
-      console.error('Failed to load map data', err);
+    } catch (err: unknown) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error('Failed to load map data', err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    loadMapData();
+    const controller = new AbortController();
+    loadMapData(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [loadMapData]);
 
 

@@ -24,22 +24,30 @@ export default function DispatcherCutoffPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadCutoffData() {
       try {
-        const res = await fetch("/api/dispatcher/cutoff");
+        const res = await fetch("/api/dispatcher/cutoff", { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setOrders(data.orders || []);
           setIsLocked(data.isLocked || false);
           setLockedAt(data.lockedAt || null);
         }
-      } catch (err) {
-        console.error("Failed to fetch cutoff info", err);
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.error("Failed to fetch cutoff info", err);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     loadCutoffData();
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   async function handleTriggerRollover() {
