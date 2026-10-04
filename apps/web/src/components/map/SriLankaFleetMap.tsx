@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { MapVehicle } from '@/app/api/dispatcher/map/route';
+import { createVehicleSvg } from './VehicleMapIcon';
 
 interface SriLankaFleetMapProps {
   vehicles: MapVehicle[];
@@ -18,6 +19,10 @@ export default function SriLankaFleetMap({
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<{ [key: string]: any }>({});
   const polylineGroupRef = useRef<any>(null);
+
+  // Map display filters
+  const [filterType, setFilterType] = useState<'all' | 'fridge' | 'van' | 'truck'>('all');
+  const [loadFilter, setLoadFilter] = useState<'all' | 'empty' | 'half' | 'full'>('all');
 
   useEffect(() => {
     let isMounted = true;
@@ -57,22 +62,22 @@ export default function SriLankaFleetMap({
       const depotIcon = L.divIcon({
         className: 'wp-depot-marker',
         html: `
-          <div style="background: #1e293b; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 2px solid #38bdf8; box-shadow: 0 4px 12px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+          <div style="background: #0f172a; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 2px solid #38bdf8; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; white-space: nowrap;">
             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #38bdf8;"></span>
             DEPOT
           </div>
         `,
-        iconSize: [60, 24],
-        iconAnchor: [30, 12],
+        iconSize: [64, 26],
+        iconAnchor: [32, 13],
       });
 
       L.marker([6.9654, 79.8841], { icon: depotIcon })
         .addTo(map)
-        .bindPopup('<b>Peliyagoda Central Logistics Hub</b><br>Primary Dispatch & Cold Storage');
+        .bindPopup('<b>Peliyagoda Central Logistics Hub</b><br>Primary Dispatch & Cold Storage Depot');
 
       L.marker([7.2906, 80.6337], { icon: depotIcon })
         .addTo(map)
-        .bindPopup('<b>Kandy Regional Depot</b><br>Central Highlands Distribution');
+        .bindPopup('<b>Kandy Regional Depot</b><br>Central Highlands Distribution Hub');
 
       polylineGroupRef.current = L.featureGroup().addTo(map);
       mapInstanceRef.current = map;
@@ -89,7 +94,16 @@ export default function SriLankaFleetMap({
     };
   }, []);
 
-  // Update vehicle markers and routes whenever vehicles or selectedVehicleId changes
+  // Filtered vehicles
+  const displayedVehicles = vehicles.filter((v) => {
+    if (filterType === 'fridge' && !v.hasFridge) return false;
+    if (filterType === 'van' && !v.chassis.includes('van')) return false;
+    if (filterType === 'truck' && !v.chassis.includes('truck')) return false;
+    if (loadFilter !== 'all' && v.loadStatus !== loadFilter) return false;
+    return true;
+  });
+
+  // Update vehicle markers and routes
   useEffect(() => {
     async function updateMarkers() {
       if (!mapInstanceRef.current) return;
@@ -104,60 +118,31 @@ export default function SriLankaFleetMap({
         polylineGroupRef.current.clearLayers();
       }
 
-      vehicles.forEach((v) => {
+      displayedVehicles.forEach((v) => {
         const isSelected = v.id === selectedVehicleId;
         const isLive = v.telemetrySource === 'LIVE_GPS';
 
-        // PickMe / Uber style vehicle marker with radar pulse for live GPS
-        const vehicleHtml = `
-          <div style="position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-            ${
-              isLive
-                ? `<div style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(16, 185, 129, 0.3); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>`
-                : ''
-            }
-            <div style="
-              width: 32px;
-              height: 32px;
-              border-radius: 50%;
-              background: ${isSelected ? '#2563eb' : isLive ? '#10b981' : '#377a8b'};
-              border: 3px solid #ffffff;
-              box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: #ffffff;
-              font-size: 11px;
-              font-weight: 800;
-              transform: ${v.heading ? `rotate(${v.heading}deg)` : 'none'};
-              transition: all 0.3s ease;
-            ">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="12 2 19 21 12 17 5 21 12 2"></polygon>
-              </svg>
-            </div>
-            <div style="
-              position: absolute;
-              bottom: -16px;
-              background: rgba(15, 23, 42, 0.88);
-              color: #ffffff;
-              font-size: 9px;
-              font-weight: 700;
-              padding: 1px 5px;
-              border-radius: 4px;
-              white-space: nowrap;
-              border: 1px solid rgba(255,255,255,0.2);
-            ">
-              ${v.code} · ${v.speedKmH}k
-            </div>
-          </div>
-        `;
+        // PickMe / Uber style top-down vehicle SVG icon
+        const vehicleSvgHtml = createVehicleSvg({
+          code: v.code,
+          chassis: v.chassis,
+          hasFridge: v.hasFridge ?? v.chassis.includes('freezer'),
+          loadStatus: v.loadStatus ?? 'half',
+          loadPct: v.loadPct ?? 50,
+          speedKmH: v.speedKmH,
+          heading: v.heading || 0,
+          isSelected,
+          isLiveGps: isLive,
+        });
+
+        const iconWidth = v.chassis.includes('truck') ? 48 : 42;
+        const iconHeight = v.chassis.includes('truck') ? 94 : 78;
 
         const icon = L.divIcon({
           className: 'wp-fleet-vehicle-icon',
-          html: vehicleHtml,
-          iconSize: [42, 42],
-          iconAnchor: [21, 21],
+          html: vehicleSvgHtml,
+          iconSize: [iconWidth, iconHeight],
+          iconAnchor: [iconWidth / 2, iconHeight / 2],
         });
 
         const marker = L.marker([v.lat, v.lng], { icon })
@@ -165,23 +150,24 @@ export default function SriLankaFleetMap({
           .on('click', () => onSelectVehicle(v.id));
 
         const popupContent = `
-          <div style="font-family: inherit; font-size: 12px; line-height: 1.4; min-width: 180px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <div style="font-family: inherit; font-size: 12px; line-height: 1.45; min-width: 210px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
               <strong style="font-size: 13px; color: #0f172a;">${v.name}</strong>
               <span style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: ${
                 isLive ? '#dcfce7; color: #15803d;' : '#e0f2fe; color: #0369a1;'
               }">
-                ${isLive ? 'LIVE SATELLITE GPS' : 'PREDICTIVE MODEL'}
+                ${isLive ? 'LIVE SATELLITE GPS' : 'PREDICTIVE INTERPOLATION'}
               </span>
             </div>
             <div><strong>Driver:</strong> ${v.driverName}</div>
-            <div><strong>Chassis:</strong> ${v.chassisLabel}</div>
-            <div><strong>Speed:</strong> ${v.speedKmH} km/h (PickMe telematics)</div>
+            <div><strong>Chassis:</strong> ${v.chassisLabel} ${v.hasFridge ? '<span style="color: #0284c7; font-weight: 700;">(Blue Reefer ❄)</span>' : ''}</div>
+            <div><strong>Load Status:</strong> <span style="font-weight: 700; text-transform: uppercase; color: ${v.loadStatus === 'full' ? '#ef4444' : v.loadStatus === 'half' ? '#f59e0b' : '#64748b'};">${v.loadStatus ?? 'HALF'} LOAD</span> (${v.loadPct ?? 50}% · ${v.weightKg ?? 1500}kg / ${v.maxWeightKg ?? 2000}kg)</div>
+            <div><strong>PickMe Speed:</strong> ${v.speedKmH} km/h · Heading ${v.heading || 0}°</div>
             <div><strong>Progress:</strong> ${v.completedStops}/${v.totalStops} stops completed</div>
             ${
               v.chilledTempC !== undefined
-                ? `<div style="margin-top: 4px; padding: 3px 6px; border-radius: 4px; background: #f1f5f9; font-weight: 600;">
-                     Thermal: ${v.chilledTempC}°C chilled · ${v.frozenTempC ?? -18}°C frozen
+                ? `<div style="margin-top: 6px; padding: 4px 8px; border-radius: 4px; background: #f0f9ff; border: 1px solid #bae6fd; font-weight: 600; color: #0369a1;">
+                     ❄ Reefer: ${v.chilledTempC}°C chilled · ${v.frozenTempC ?? -18}°C frozen
                    </div>`
                 : ''
             }
@@ -199,10 +185,9 @@ export default function SriLankaFleetMap({
           ];
 
           L.polyline(latLngs, {
-
-            color: isLive ? '#10b981' : '#2563eb',
+            color: isLive ? '#10b981' : '#0284c7',
             weight: 4,
-            opacity: 0.8,
+            opacity: 0.85,
             dashArray: isLive ? undefined : '6, 8',
           }).addTo(polylineGroupRef.current);
 
@@ -211,24 +196,24 @@ export default function SriLankaFleetMap({
               className: 'wp-stop-marker',
               html: `
                 <div style="
-                  width: 20px;
-                  height: 20px;
+                  width: 22px;
+                  height: 22px;
                   border-radius: 50%;
-                  background: ${s.status === 'Delivered' ? '#16a34a' : s.status === 'EnRoute' ? '#2563eb' : '#f59e0b'};
+                  background: ${s.status === 'Delivered' ? '#16a34a' : s.status === 'EnRoute' ? '#0284c7' : '#f59e0b'};
                   color: #ffffff;
-                  font-size: 10px;
+                  font-size: 11px;
                   font-weight: 800;
                   display: flex;
                   align-items: center;
                   justify-content: center;
                   border: 2px solid #ffffff;
-                  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
                 ">
                   ${s.stopNumber}
                 </div>
               `,
-              iconSize: [20, 20],
-              iconAnchor: [10, 10],
+              iconSize: [22, 22],
+              iconAnchor: [11, 11],
             });
 
             L.marker([s.lat, s.lng], { icon: stopIcon })
@@ -243,18 +228,175 @@ export default function SriLankaFleetMap({
     }
 
     updateMarkers();
-  }, [vehicles, selectedVehicleId, onSelectVehicle]);
+  }, [displayedVehicles, selectedVehicleId, onSelectVehicle]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '480px' }}>
-      <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: '480px', borderRadius: '8px' }} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '520px' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: '520px', borderRadius: '8px' }} />
+
+      {/* Top Left: PickMe / Uber Map Filter Controls */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 12,
+          left: 12,
+          zIndex: 1000,
+          background: 'rgba(255, 255, 255, 0.96)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: 8,
+          padding: '6px 10px',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          border: '1px solid rgba(0,0,0,0.08)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginRight: 4 }}>Chassis:</span>
+          <button
+            type="button"
+            onClick={() => setFilterType('all')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: filterType === 'all' ? '#0f172a' : '#f1f5f9',
+              color: filterType === 'all' ? '#ffffff' : '#334155',
+            }}
+          >
+            All ({vehicles.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType('fridge')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: filterType === 'fridge' ? '#0284c7' : '#f0f9ff',
+              color: filterType === 'fridge' ? '#ffffff' : '#0284c7',
+            }}
+          >
+            ❄ Blue Fridge ({vehicles.filter((v) => v.hasFridge).length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType('van')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: filterType === 'van' ? '#10b981' : '#f1f5f9',
+              color: filterType === 'van' ? '#ffffff' : '#334155',
+            }}
+          >
+            Vans
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType('truck')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: filterType === 'truck' ? '#334155' : '#f1f5f9',
+              color: filterType === 'truck' ? '#ffffff' : '#334155',
+            }}
+          >
+            Trucks
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginRight: 4 }}>Load:</span>
+          <button
+            type="button"
+            onClick={() => setLoadFilter('all')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: loadFilter === 'all' ? '#0f172a' : '#f1f5f9',
+              color: loadFilter === 'all' ? '#ffffff' : '#334155',
+            }}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoadFilter('full')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: loadFilter === 'full' ? '#ef4444' : '#fef2f2',
+              color: loadFilter === 'full' ? '#ffffff' : '#b91c1c',
+            }}
+          >
+            Full Load
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoadFilter('half')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: loadFilter === 'half' ? '#f59e0b' : '#fffbeb',
+              color: loadFilter === 'half' ? '#ffffff' : '#b45309',
+            }}
+          >
+            Half Load
+          </button>
+          <button
+            type="button"
+            onClick={() => setLoadFilter('empty')}
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontSize: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              background: loadFilter === 'empty' ? '#64748b' : '#f8fafc',
+              color: loadFilter === 'empty' ? '#ffffff' : '#475569',
+            }}
+          >
+            Empty
+          </button>
+        </div>
+      </div>
+
+      {/* Top Right: Status Legend */}
       <div
         style={{
           position: 'absolute',
           top: 12,
           right: 12,
           zIndex: 1000,
-          background: 'rgba(255, 255, 255, 0.95)',
+          background: 'rgba(255, 255, 255, 0.96)',
           backdropFilter: 'blur(8px)',
           borderRadius: 8,
           padding: '6px 12px',
@@ -277,7 +419,7 @@ export default function SriLankaFleetMap({
           }}
         />
         <span style={{ fontWeight: 600, color: '#1e293b' }}>
-          Sri Lanka Fleet Telemetry · PickMe / Uber Precision
+          PickMe / Uber Live Fleet Telematics
         </span>
       </div>
     </div>
