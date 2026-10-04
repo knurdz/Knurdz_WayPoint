@@ -112,14 +112,15 @@ Route scheduling and vehicle packing are delegated to a dedicated Python 3.12 mi
 
 ## 4. Architectural Decision Records (ADRs)
 
-### ADR-001: Next.js 16 Standalone BFF vs. Separate Express/NestJS Gateway
-* **Context**: We needed to serve 4 responsive web portals while providing secure, authenticated REST APIs for mobile sync.
-* **Decision**: Implement a unified Next.js 16 App Router application with standalone output (`output: 'standalone'`).
+### ADR-001: Next.js 16 Production Runtime: Standard `next start` vs Standalone Tracing
+* **Context**: We needed a unified Backend-For-Frontend serving 4 responsive web portals and mobile sync APIs while ensuring 100% deterministic asset delivery and zero client hydration failure risk.
+* **Decision**: Adopt the standard Next.js production runtime (`next start`) rather than decoupled standalone tracing (`output: 'standalone'`).
 * **Rationale**:
-  * Eliminates cross-service network serialization latency between frontend SSR components and the BFF layer.
-  * Next.js standalone container packages only traced `node_modules`, keeping image size under 180MB.
-  * Avoids managing separate deployment pipelines, CORS policies, and duplicate TypeScript interface declarations.
-* **Trade-off**: Requires strict discipline to keep route handler business logic modular within `src/lib/`.
+  * Eliminates fragile post-build static asset duplication and path divergence between `.next/static` and custom standalone roots.
+  * Guarantees atomic MIME type resolution (`text/css`, `application/javascript`) and prevents strict browser security header (`nosniff`) hydration crashes.
+  * Natively manages Gzip/Brotli compression, multi-level caching, and monorepo workspace package symlinks out of the box.
+  * Standardized runtime execution (`pnpm --filter @waypoint/web start`) across local developer environments, Docker Compose containers, and the production Azure VM.
+* **Trade-off**: Requires retaining workspace dependencies in the runner container image rather than an aggressively pruned standalone tree.
 
 ### ADR-002: Python FastAPI + OR-Tools vs. In-Process Node.js Heuristics
 * **Context**: Route optimization requires solving complex combinatorial constraints across 100 outlets and 37 vehicles.
