@@ -18,6 +18,7 @@ def find_data_file(filename: str) -> str:
     Locates a CSV data file across standard project root paths.
     """
     possible_roots = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../data"),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../data"),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data"),
         os.path.abspath("data"),

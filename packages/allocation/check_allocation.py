@@ -1,5 +1,5 @@
 """
-check_allocation.py - Task 2B feasibility checker.
+check_allocation.py: Task 2B feasibility checker
 """
 
 import sys
@@ -7,13 +7,21 @@ import os
 import pandas as pd
 
 def _find(name):
-    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-    for dirpath, _, files in os.walk(root):
-        if name in files:
-            return os.path.join(dirpath, name)
-    raise SystemExit(f"cannot find {name} under {root} - keep the data folder as shipped")
+    candidate_roots = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../data"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../data"),
+        os.path.abspath("data"),
+        os.path.abspath("../data"),
+    ]
+    for root in candidate_roots:
+        if os.path.isdir(root):
+            for dirpath, _, files in os.walk(root):
+                if name in files:
+                    return os.path.join(dirpath, name)
+    raise SystemExit(f"cannot find {name} across data folders; keep the data folder as shipped")
 
-# The pre-dawn window (03:30-08:00) and the daytime window, in minutes.
+# The pre dawn window 03:30 to 08:00 and daytime window in minutes
 TRIP_BUDGET_PREDAWN = 270
 TRIP_BUDGET_DAYTIME = 480
 MAX_TRIPS_PER_VEHICLE = 2
@@ -49,6 +57,19 @@ def load_reference(example=False):
 def check(path, example=False):
     scn, fleet, veh, dtravel, allowance = load_reference(example)
     errors, warnings = [], []
+
+    if not os.path.exists(path):
+        candidate_paths = [
+            os.path.join("..", path),
+            os.path.join("../..", path),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..", path),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../..", path),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), path),
+        ]
+        for candidate in candidate_paths:
+            if os.path.exists(candidate):
+                path = candidate
+                break
 
     try:
         sub = pd.read_csv(path)

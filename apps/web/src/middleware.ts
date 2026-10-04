@@ -47,10 +47,13 @@ export async function middleware(req: NextRequest) {
     '/api/loader': ['loader', 'dispatcher'],
     '/api/driver': ['driver', 'dispatcher'],
     '/api/store': ['store', 'dispatcher'],
+    '/api/agent': ['dispatcher', 'loader', 'driver', 'store'],
+    '/api/simulator': ['dispatcher'],
+    '/api/sync': ['driver', 'dispatcher'],
   };
 
   const matchedApiPrefix = Object.keys(API_ROLE_PERMISSIONS).find((prefix) =>
-    pathname.startsWith(prefix)
+    pathname.startsWith(prefix),
   );
 
   if (matchedApiPrefix) {
@@ -65,7 +68,7 @@ export async function middleware(req: NextRequest) {
     if (!token) {
       return NextResponse.json(
         { error: 'Authentication required for portal API', code: 'UNAUTHORIZED' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -73,7 +76,7 @@ export async function middleware(req: NextRequest) {
     if (!payload || !payload.role) {
       return NextResponse.json(
         { error: 'Invalid or expired session token', code: 'INVALID_TOKEN' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -84,7 +87,7 @@ export async function middleware(req: NextRequest) {
           error: `Forbidden: Role ${payload.role} cannot access ${matchedApiPrefix}`,
           code: 'FORBIDDEN',
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -158,6 +161,9 @@ export const config = {
     '/api/loader/:path*',
     '/api/driver/:path*',
     '/api/store/:path*',
+    '/api/agent/:path*',
+    '/api/simulator/:path*',
+    '/api/sync/:path*',
     '/login',
   ],
 };

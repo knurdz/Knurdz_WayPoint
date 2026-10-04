@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     if (!body || typeof body !== 'object') {
       return NextResponse.json(
         { success: false, error: 'Invalid JSON request payload', code: 'INVALID_PAYLOAD' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -16,11 +16,13 @@ export async function POST(req: Request) {
     if (!deliveryCode || typeof deliveryCode !== 'string' || !deliveryCode.trim()) {
       return NextResponse.json(
         { success: false, error: 'Delivery code is required', code: 'MISSING_DELIVERY_CODE' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const hasSignature = Boolean(signatureData && typeof signatureData === 'string' && signatureData.trim());
+    const hasSignature = Boolean(
+      signatureData && typeof signatureData === 'string' && signatureData.trim(),
+    );
     const hasPhoto = Boolean(photoCaptured);
 
     if (!hasSignature && !hasPhoto) {
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
           error: 'Proof of delivery requires either receiver signature or delivery photo',
           code: 'MISSING_VERIFICATION_ARTIFACT',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,11 +43,11 @@ export async function POST(req: Request) {
           error: 'Quantity confirmation is required before submitting proof of delivery',
           code: 'QUANTITY_NOT_VERIFIED',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const podId = `POD_${Math.floor(100000 + Math.random() * 900000)}`;
+    const podId = `POD_${crypto.randomUUID()}`;
 
     return NextResponse.json({
       success: true,
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Internal POD processing error', details: String(error) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

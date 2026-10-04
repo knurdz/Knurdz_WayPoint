@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rate_limiter';
 
 // Default studio voice profiles available on ElevenLabs free tier
 const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel: Professional operations dispatcher
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+    const limit = checkRateLimit(`voice_synth_${ip}`, 15, 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many voice synthesis requests. Please retry shortly.',
+          code: 'RATE_LIMIT_EXCEEDED',
+        },
+        { status: 429, headers: { 'Retry-After': String(limit.resetInSeconds) } },
+      );
+    }
+
     const body = await req.json();
-    const text = (body.text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const text = (body.text || '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required for voice synthesis' }, { status: 400 });
@@ -71,7 +87,7 @@ export async function POST(req: Request) {
         provider: 'browser_neural',
         reason: 'internal_error',
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 }
