@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma, Temperature, OrderStatus, PlanningBucket } from '@waypoint/database';
 import { getAuthFromRequest } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate_limiter';
 import { storeOrderSchema, validateRequestBody } from '@/lib/api_schemas';
@@ -70,28 +71,98 @@ export async function POST(req: NextRequest) {
         ? outletCode.trim()
         : 'OUT001');
 
-    const generatedOrders = [
-      {
-        orderId: `ORD${Math.floor(100000 + Math.random() * 900000)}`,
-        outletCode: cleanOutlet,
+    // Verify outlet exists in database or fallback to OUT001
+    const outletExists = await prisma.outlet.findUnique({
+      where: { outletId: cleanOutlet },
+    });
+    const targetOutletId = outletExists ? cleanOutlet : 'OUT001';
+
+    const dateOnly = new Date(slstDate.getFullYear(), slstDate.getMonth(), slstDate.getDate());
+    const generatedOrders = [];
+
+    if (parsedAmbientWeight > 0) {
+      const orderId = `ORD${Math.floor(100000 + Math.random() * 900000)}`;
+      const orderUnits = Math.max(1, Math.ceil(parsedAmbientWeight / 15));
+      const volumeM3 = +(parsedAmbientWeight * 0.0022).toFixed(3);
+
+      await prisma.order.create({
+        data: {
+          orderId,
+          outletId: targetOutletId,
+          orderDate: dateOnly,
+          tempRequirement: Temperature.ambient,
+          orderUnits,
+          weightKg: parsedAmbientWeight,
+          volumeM3,
+          status: isLate ? OrderStatus.deferred : OrderStatus.confirmed,
+          planningBucket: isLate ? PlanningBucket.subsequent_run : PlanningBucket.next_day,
+          items: {
+            create: [
+              {
+                sku: 'AMB-DRY-01',
+                description: ambientProduct || 'Bread loaves, organic rice',
+                quantity: orderUnits,
+                weightKg: parsedAmbientWeight,
+                volumeM3,
+              },
+            ],
+          },
+        },
+      });
+
+      generatedOrders.push({
+        orderId,
+        outletCode: targetOutletId,
         cargoType: 'Ambient',
         product: ambientProduct || 'Bread loaves, organic rice',
         weightKg: parsedAmbientWeight,
         isLate,
         scheduledRun: isLate ? 'Next Run (Rolled)' : 'Today 05:00 Run',
         status: isLate ? 'ROLLED_LATE' : 'CONFIRMED',
-      },
-      {
-        orderId: `ORD${Math.floor(100000 + Math.random() * 900000)}`,
-        outletCode: cleanOutlet,
+      });
+    }
+
+    if (parsedChilledWeight > 0) {
+      const orderId = `ORD${Math.floor(100000 + Math.random() * 900000)}`;
+      const orderUnits = Math.max(1, Math.ceil(parsedChilledWeight / 12));
+      const volumeM3 = +(parsedChilledWeight * 0.0028).toFixed(3);
+
+      await prisma.order.create({
+        data: {
+          orderId,
+          outletId: targetOutletId,
+          orderDate: dateOnly,
+          tempRequirement: Temperature.reefer,
+          orderUnits,
+          weightKg: parsedChilledWeight,
+          volumeM3,
+          status: isLate ? OrderStatus.deferred : OrderStatus.confirmed,
+          planningBucket: isLate ? PlanningBucket.subsequent_run : PlanningBucket.next_day,
+          items: {
+            create: [
+              {
+                sku: 'REEF-CHILL-01',
+                description: chilledProduct || 'Dairy cases, curd, ice cream',
+                quantity: orderUnits,
+                weightKg: parsedChilledWeight,
+                volumeM3,
+              },
+            ],
+          },
+        },
+      });
+
+      generatedOrders.push({
+        orderId,
+        outletCode: targetOutletId,
         cargoType: 'Chilled',
         product: chilledProduct || 'Dairy cases, curd, ice cream',
         weightKg: parsedChilledWeight,
         isLate,
         scheduledRun: isLate ? 'Next Run (Rolled)' : 'Today 05:00 Run',
         status: isLate ? 'ROLLED_LATE' : 'CONFIRMED',
-      },
-    ];
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -103,6 +174,7 @@ export async function POST(req: NextRequest) {
         : 'Both orders confirmed for scheduled morning dispatch',
     });
   } catch (error) {
+    console.error('Failed to create store order:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to place store orders', details: String(error) },
       { status: 500 },
