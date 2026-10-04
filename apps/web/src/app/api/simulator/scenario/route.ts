@@ -8,6 +8,13 @@ import {
 import { addIncident, resetChaosIncidents } from '@/lib/incidentsStore';
 
 export async function POST(req: Request) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Simulation endpoints are disabled in production environment', code: 'ENDPOINT_DISABLED' },
+      { status: 403 },
+    );
+  }
+
   const startTime = Date.now();
   try {
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';

@@ -177,15 +177,15 @@ export default function LoginPage() {
               <div className="wp-persona-selector-header">
                 <span className="wp-persona-selector-title">
                   <Users size={14} style={{ color: 'var(--wp-primary)' }} />
-                  <span>Demo Personas</span>
+                  <span>Enterprise Role Directory</span>
                 </span>
-                <span className="wp-persona-badge">4 Roles Available</span>
+                <span className="wp-persona-badge">Verified Roles</span>
               </div>
               <p className="wp-persona-selector-desc">
-                Choose a persona to load profile credentials, or double click to launch directly:
+                Select a role profile to load assigned credentials, or double click to authenticate directly:
               </p>
 
-              <div className="wp-persona-grid" role="radiogroup" aria-label="Demo Personas">
+              <div className="wp-persona-grid" role="radiogroup" aria-label="Enterprise Roles">
                 {PERSONAS.map((p) => {
                   const isActive = selectedPersona.id === p.id;
                   const DestIcon = p.destIcon;
@@ -227,9 +227,9 @@ export default function LoginPage() {
               <div className="wp-persona-hint">
                 <span>
                   <MousePointerClick size={12} style={{ display: 'inline', marginRight: 4 }} />
-                  Click to select persona · Double click to launch
+                  Click to select profile · Double click to launch
                 </span>
-                <span className="font-mono">1 Click Sign In</span>
+                <span className="font-mono">Quick Access</span>
               </div>
             </div>
 

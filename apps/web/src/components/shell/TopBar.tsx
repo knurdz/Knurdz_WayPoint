@@ -16,7 +16,6 @@ import {
   MessageSquare,
   AudioWaveform,
   Radio,
-  Flame,
 } from 'lucide-react';
 import { useAgent } from '../agent/AgentContext';
 
@@ -76,7 +75,6 @@ export default function TopBar({
     openDrawer,
     isRadioActive,
     toggleRadio,
-    toggleSimulator,
   } = useAgent();
 
   const displayTitle = title || TITLE_MAP[pathname] || 'Mission Control';
@@ -111,27 +109,6 @@ export default function TopBar({
 
       <div className="wp-topbar-right">
         <div className="wp-agent-controls">
-          {/* Chaos Simulator Trigger */}
-          <button
-            type="button"
-            onClick={toggleSimulator}
-            className="wp-btn wp-btn-outline"
-            style={{
-              padding: '0.35rem 0.65rem',
-              fontSize: '0.72rem',
-              borderColor: '#f97316',
-              color: '#ea580c',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
-            aria-label="Open Chaos and Stress Simulator"
-            title="Evaluator God Mode: Open Chaos Simulator"
-          >
-            <Flame size={13} color="#ea580c" />
-            <span>Chaos Mode</span>
-          </button>
-
           {/* Proactive Radio Dispatch Stream Toggle */}
           <button
             type="button"

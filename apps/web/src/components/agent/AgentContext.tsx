@@ -3,23 +3,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Bot, MessageSquare } from 'lucide-react';
 import AgentDrawer from './AgentDrawer';
-import OperationsSimulator from '../simulator/OperationsSimulator';
 
 interface AgentContextType {
   isLive: boolean;
   agentStatus: string;
   isDrawerOpen: boolean;
   isRadioActive: boolean;
-  isSimulatorOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
   toggleLive: () => void;
   setLive: (live: boolean, status?: string) => void;
   toggleRadio: () => void;
-  openSimulator: () => void;
-  closeSimulator: () => void;
-  toggleSimulator: () => void;
   broadcastRadioAlert: (text: string) => void;
 }
 
@@ -34,7 +29,6 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const [agentStatus, setAgentStatusState] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRadioActive, setIsRadioActiveState] = useState(false);
-  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
 
   // Initialize from session storage on mount
   useEffect(() => {
@@ -77,10 +71,6 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
-
-  const openSimulator = useCallback(() => setIsSimulatorOpen(true), []);
-  const closeSimulator = useCallback(() => setIsSimulatorOpen(false), []);
-  const toggleSimulator = useCallback(() => setIsSimulatorOpen((prev) => !prev), []);
 
   const toggleRadio = useCallback(() => {
     setIsRadioActiveState((prev) => {
@@ -152,16 +142,12 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         agentStatus,
         isDrawerOpen,
         isRadioActive,
-        isSimulatorOpen,
         openDrawer,
         closeDrawer,
         toggleDrawer,
         toggleLive,
         setLive,
         toggleRadio,
-        openSimulator,
-        closeSimulator,
-        toggleSimulator,
         broadcastRadioAlert,
       }}
     >
@@ -190,13 +176,6 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
       {/* Global slide over agent drawer */}
       <AgentDrawer isOpen={isDrawerOpen} onClose={closeDrawer} />
-
-      {/* Global Evaluator Chaos Simulator */}
-      <OperationsSimulator
-        isOpen={isSimulatorOpen}
-        onClose={closeSimulator}
-        onBroadcast={broadcastRadioAlert}
-      />
     </AgentContext.Provider>
   );
 }
@@ -206,16 +185,12 @@ const DEFAULT_AGENT_CONTEXT: AgentContextType = {
   agentStatus: '',
   isDrawerOpen: false,
   isRadioActive: false,
-  isSimulatorOpen: false,
   openDrawer: () => {},
   closeDrawer: () => {},
   toggleDrawer: () => {},
   toggleLive: () => {},
   setLive: () => {},
   toggleRadio: () => {},
-  openSimulator: () => {},
-  closeSimulator: () => {},
-  toggleSimulator: () => {},
   broadcastRadioAlert: () => {},
 };
 
