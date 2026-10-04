@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { addIncident } from '@/lib/incidentsStore';
+import { storeDisputeSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const { deliveryCode, missingCount, damagedNotes, signatureSigned } = body;
+    const validation = await validateRequestBody(req, storeDisputeSchema, { allowEmptyBody: true });
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { deliveryCode, missingCount, damagedNotes, signatureSigned } = validation.data;
 
-    const count = Number(missingCount) || 1;
-    const cleanCode = (deliveryCode && typeof deliveryCode === 'string') ? deliveryCode.trim() : 'DEL_88390';
+    const count = missingCount || 1;
+    const cleanCode = deliveryCode?.trim() || 'DEL_88390';
     const disputeId = `DSP_${Math.floor(1000 + Math.random() * 9000)}`;
 
     addIncident({

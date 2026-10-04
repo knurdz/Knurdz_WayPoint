@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { loaderSignoffSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { vehicleId, loaderName, stopsLoaded } = body;
+    const validation = await validateRequestBody(req, loaderSignoffSchema);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { vehicleId, loaderName, stopsLoaded } = validation.data;
 
     const gatePassCode = `GP_${crypto.randomUUID()}`;
 

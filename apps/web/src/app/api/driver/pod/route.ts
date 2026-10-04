@@ -1,51 +1,16 @@
 import { NextResponse } from 'next/server';
+import { driverPodSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => null);
-
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON request payload', code: 'INVALID_PAYLOAD' },
-        { status: 400 },
-      );
+    const validation = await validateRequestBody(req, driverPodSchema);
+    if (!validation.success) {
+      return validation.response;
     }
 
-    const { deliveryCode, receiverName, signatureData, photoCaptured, verifiedQty } = body;
-
-    if (!deliveryCode || typeof deliveryCode !== 'string' || !deliveryCode.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'Delivery code is required', code: 'MISSING_DELIVERY_CODE' },
-        { status: 400 },
-      );
-    }
-
-    const hasSignature = Boolean(
-      signatureData && typeof signatureData === 'string' && signatureData.trim(),
-    );
+    const { deliveryCode, receiverName, signatureData, photoCaptured } = validation.data;
+    const hasSignature = Boolean(signatureData && signatureData.trim());
     const hasPhoto = Boolean(photoCaptured);
-
-    if (!hasSignature && !hasPhoto) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Proof of delivery requires either receiver signature or delivery photo',
-          code: 'MISSING_VERIFICATION_ARTIFACT',
-        },
-        { status: 400 },
-      );
-    }
-
-    if (!verifiedQty) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Quantity confirmation is required before submitting proof of delivery',
-          code: 'QUANTITY_NOT_VERIFIED',
-        },
-        { status: 400 },
-      );
-    }
 
     const podId = `POD_${crypto.randomUUID()}`;
 
