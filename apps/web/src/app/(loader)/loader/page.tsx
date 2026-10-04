@@ -1,346 +1,367 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  ScanBarcode,
+  BadgeCheck,
+  AlertTriangle,
+  Clock,
+  X,
+  CheckCircle2,
+} from 'lucide-react';
 
-interface ManifestLine {
+interface DockLine {
   id: string;
-  sku: string;
   name: string;
-  stopNumber: number;
-  stopName: string;
+  sku: string;
   qty: string;
   temp: string;
-  isAlert?: boolean;
+  tempBadgeClass: string;
+  img: string;
+  isShort?: boolean;
+  shortLabel?: string;
   verified: boolean;
 }
 
-const initialLines: ManifestLine[] = [
+interface DockStop {
+  step: number;
+  label: string;
+  title: string;
+  window: string;
+  isAlert?: boolean;
+  lines: DockLine[];
+}
+
+const INITIAL_STOPS: DockStop[] = [
   {
-    id: "l1",
-    sku: "SKU_FZ_VEG_01",
-    name: "Frozen Farm Vegetables 1kg",
-    stopNumber: 4,
-    stopName: "Stop 4 · OUT010 Fresh Colombo 03",
-    qty: "12 Cases",
-    temp: "18C Frozen",
-    verified: false,
+    step: 1,
+    label: 'Load first',
+    title: 'Stop 4 · OUT010 Fresh Colombo 03',
+    window: '05:00 to 07:30',
+    lines: [
+      {
+        id: 's4-1',
+        name: 'Frozen Farm Vegetables 1kg',
+        sku: 'SKU-FZ-VEG-01',
+        qty: '12 Cases',
+        temp: '−18°C Frozen',
+        tempBadgeClass: 'wp-badge-info',
+        img: '/assets/products/frozen-veg.jpg',
+        verified: false,
+      },
+      {
+        id: 's4-2',
+        name: 'Chilled Greek Yogurt 500g',
+        sku: 'SKU-CH-YOG-02',
+        qty: '8 Cases',
+        temp: '+4°C Chilled',
+        tempBadgeClass: 'wp-badge-success',
+        img: '/assets/products/greek-yogurt.jpg',
+        verified: false,
+      },
+    ],
   },
   {
-    id: "l2",
-    sku: "SKU_CH_YOG_02",
-    name: "Chilled Greek Yogurt 500g",
-    stopNumber: 4,
-    stopName: "Stop 4 · OUT010 Fresh Colombo 03",
-    qty: "8 Cases",
-    temp: "4C Chilled",
-    verified: false,
+    step: 2,
+    label: 'Mid compartment',
+    title: 'Stop 3 · OUT008 Fresh Colombo 04',
+    window: '05:00 to 07:30',
+    lines: [
+      {
+        id: 's3-1',
+        name: 'Ambient Organic Brown Rice 5kg',
+        sku: 'SKU-AM-RICE-05',
+        qty: '20 Sacks',
+        temp: 'Ambient',
+        tempBadgeClass: '',
+        img: '/assets/products/organic-rice.jpg',
+        verified: false,
+      },
+    ],
   },
   {
-    id: "l3",
-    sku: "SKU_AM_RICE_05",
-    name: "Ambient Organic Brown Rice 5kg",
-    stopNumber: 3,
-    stopName: "Stop 3 · OUT008 Fresh Colombo 04",
-    qty: "20 Sacks",
-    temp: "Ambient",
-    verified: false,
-  },
-  {
-    id: "l4",
-    sku: "SKU_CH_MILK_04",
-    name: "Fresh Pasteurised Milk 1L",
-    stopNumber: 2,
-    stopName: "Stop 2 · OUT003 Kandy Central",
-    qty: "15 Cases (3 short flagged)",
-    temp: "4C Chilled",
+    step: 3,
+    label: 'Forward · short',
+    title: 'Stop 2 · OUT004 Fresh Colombo 07',
+    window: '05:00 to 07:30',
     isAlert: true,
-    verified: false,
+    lines: [
+      {
+        id: 's2-1',
+        name: 'Pasteurized Fresh Milk 1L',
+        sku: 'SKU-CH-MILK-1L',
+        qty: '12 / 15 Cases',
+        temp: 'Chilled',
+        tempBadgeClass: 'wp-badge-info',
+        img: '/assets/products/milk-bottle.jpg',
+        isShort: true,
+        shortLabel: 'Short −3',
+        verified: false,
+      },
+    ],
   },
   {
-    id: "l5",
-    sku: "SKU_AM_FLOUR_01",
-    name: "Bakers Choice Flour 25kg",
-    stopNumber: 1,
-    stopName: "Stop 1 · OUT001 Fresh Galle Rd",
-    qty: "10 Bags",
-    temp: "Ambient",
-    verified: false,
-  },
-  {
-    id: "l6",
-    sku: "SKU_CH_BUTTER_03",
-    name: "Salted Table Butter 200g",
-    stopNumber: 1,
-    stopName: "Stop 1 · OUT001 Fresh Galle Rd",
-    qty: "6 Cartons",
-    temp: "4C Chilled",
-    verified: false,
+    step: 4,
+    label: 'Load last',
+    title: 'Stop 1 · OUT001 Fresh Galle Rd',
+    window: '05:00 to 07:30',
+    lines: [
+      {
+        id: 's1-1',
+        name: 'Chilled Dairy & Meat Selection',
+        sku: 'DEL-88401',
+        qty: '4,850 kg',
+        temp: 'Reefer',
+        tempBadgeClass: 'wp-badge-info',
+        img: '/assets/products/chilled-meat.jpg',
+        verified: false,
+      },
+      {
+        id: 's1-2',
+        name: 'Ambient Bakery Carts',
+        sku: 'DEL-88402',
+        qty: '2,100 kg',
+        temp: 'Ambient',
+        tempBadgeClass: '',
+        img: '/assets/products/bakery-bread.jpg',
+        verified: false,
+      },
+    ],
   },
 ];
 
-export default function LoaderPage() {
-  const [lines, setLines] = useState<ManifestLine[]>(initialLines);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [scannedSku, setScannedSku] = useState("");
-  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
+export default function LoaderDockPage() {
+  const [stops, setStops] = useState<DockStop[]>(INITIAL_STOPS);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannedInput, setScannedInput] = useState('');
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
-  const toggleVerify = (id: string) => {
-    setLines((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, verified: !l.verified } : l))
+  const totalLines = stops.reduce((acc, s) => acc + s.lines.length, 0);
+  const verifiedCount = stops.reduce(
+    (acc, s) => acc + s.lines.filter((l) => l.verified).length,
+    0
+  );
+  const progressPct = Math.round((verifiedCount / totalLines) * 100);
+
+  const toggleCheck = (lineId: string) => {
+    setStops((prev) =>
+      prev.map((stop) => ({
+        ...stop,
+        lines: stop.lines.map((line) =>
+          line.id === lineId ? { ...line, verified: !line.verified } : line
+        ),
+      }))
     );
   };
 
-  const handleSimulateScan = async (e: React.FormEvent) => {
+  const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scannedSku) return;
+    if (!scannedInput.trim()) return;
 
-    try {
-      const res = await fetch("/api/loader/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sku: scannedSku, bayId: "Bay 04", vehicleId: "VEH004" }),
-      });
+    let found = false;
+    setStops((prev) =>
+      prev.map((stop) => ({
+        ...stop,
+        lines: stop.lines.map((line) => {
+          if (
+            line.sku.toLowerCase() === scannedInput.trim().toLowerCase() ||
+            line.name.toLowerCase().includes(scannedInput.trim().toLowerCase())
+          ) {
+            found = true;
+            return { ...line, verified: true };
+          }
+          return line;
+        }),
+      }))
+    );
 
-      if (res.ok) {
-        const data = await res.json();
-        setLines((prev) =>
-          prev.map((l) => (l.sku === scannedSku ? { ...l, verified: true } : l))
-        );
-        setScanFeedback(`✓ Verified: ${data.item.name}`);
-        setScannedSku("");
-      } else {
-        const err = await res.json();
-        setScanFeedback(`⚠ ${err.error || "Invalid barcode"}`);
-      }
-    } catch {
-      setScanFeedback("Scanner network error");
+    if (found) {
+      setScanMessage(`Barcode matched: ${scannedInput.toUpperCase()} verified successfully!`);
+    } else {
+      setScanMessage(`No pending SKU matched: ${scannedInput}`);
     }
+    setScannedInput('');
   };
 
-  const verifiedCount = lines.filter((l) => l.verified).length;
-  const progressPct = Math.round((verifiedCount / lines.length) * 100);
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Header */}
-      <div className="store-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+    <div className="dock-main">
+      <div className="store-page-header">
         <div>
-          <div className="store-page-meta" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+          <div className="store-page-meta">
             <span className="wp-state wp-state-success">Cold Seal Active</span>
             <span className="font-mono store-outlet-id">VEH004</span>
           </div>
-          <h1 className="wp-headline-md store-page-title" style={{ margin: 0 }}>
-            Bay 04 Load Sequence
-          </h1>
-          <p className="wp-subtext store-page-subtitle" style={{ margin: "0.25rem 0 0" }}>
-            Peliyagoda · Trip 1 · reverse LIFO · window 05:00 to 07:30
-          </p>
+          <h1 className="wp-headline-md store-page-title">Bay 04 Load Sequence</h1>
+          <p className="wp-subtext store-page-subtitle">Peliyagoda · Trip 1 · reverse LIFO · window 05:00 to 07:30</p>
         </div>
-
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <div className="dock-page-actions">
           <button
             type="button"
             className="wp-btn wp-btn-outline"
-            onClick={() => setIsScannerOpen(true)}
-            style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}
+            onClick={() => setScannerOpen(true)}
           >
-            Scan Barcode
+            <ScanBarcode size={15} />
+            <span>Scan Barcode</span>
           </button>
-          <Link href="/loader/shortfall" className="wp-btn wp-btn-outline" style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}>
-            Report Shortfall
-          </Link>
-          <Link href="/loader/signoff" className="wp-btn wp-btn-primary" style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}>
-            Departure signoff
+          <Link href="/loader/signoff" className="wp-btn wp-btn-primary">
+            <BadgeCheck size={15} />
+            <span>Departure signoff</span>
           </Link>
         </div>
       </div>
 
-      {/* KPI Row */}
       <div className="wp-kpi-row store-kpi-row">
         <div className="wp-kpi">
           <span className="wp-label">Verified</span>
-          <p className="wp-kpi-value font-mono">
-            {verifiedCount}/{lines.length}
-          </p>
-          <div className="wp-meter dock-progress-meter" style={{ height: "4px", marginTop: "0.35rem" }}>
-            <div className="wp-meter-fill ok" style={{ width: `${progressPct}%` }}></div>
+          <p className="wp-kpi-value">{verifiedCount}/{totalLines}</p>
+          <div className="wp-meter dock-progress-meter">
+            <div className="wp-meter-fill" style={{ width: `${progressPct}%` }}></div>
           </div>
-          <span className="wp-subtext store-kpi-caption" style={{ fontSize: "0.75rem" }}>
-            {progressPct}% lines loaded
-          </span>
+          <span className="wp-subtext store-kpi-caption">Lines checked on this trip</span>
         </div>
-
         <div className="wp-kpi">
           <span className="wp-label">Shortfall</span>
-          <p className="wp-kpi-value" style={{ color: "var(--wp-error, #ef4444)" }}>
-            3
-          </p>
-          <span className="wp-subtext store-kpi-caption" style={{ fontSize: "0.75rem" }}>
-            Milk cases · Stop 2
-          </span>
+          <p className="wp-kpi-value" style={{ color: 'var(--wp-error)' }}>−3</p>
+          <span className="wp-subtext store-kpi-caption">Milk cases · Stop 2</span>
         </div>
-
         <div className="wp-kpi">
           <span className="wp-label">Stops</span>
           <p className="wp-kpi-value">4</p>
-          <span className="wp-subtext store-kpi-caption" style={{ fontSize: "0.75rem" }}>
-            Load last stop first
-          </span>
+          <span className="wp-subtext store-kpi-caption">Load last stop first</span>
         </div>
-
         <div className="wp-kpi">
           <span className="wp-label">Window</span>
-          <p className="wp-kpi-value font-mono" style={{ fontSize: "1.45rem" }}>
-            05:00
-          </p>
-          <span className="wp-subtext store-kpi-caption" style={{ fontSize: "0.75rem" }}>
-            Closes 07:30 SLST
-          </span>
+          <p className="wp-kpi-value" style={{ fontSize: '1.45rem' }}>05:00</p>
+          <span className="wp-subtext store-kpi-caption">Closes 07:30 SLST</span>
         </div>
       </div>
 
-      {/* Load Sequence Panel */}
-      <section className="dock-sequence-panel wp-panel" style={{ padding: "1.25rem" }}>
-        <div className="store-panel-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <div>
-            <span className="wp-label">Reverse Load</span>
-            <h2 className="wp-headline-sm store-panel-title" style={{ margin: "0.25rem 0 0" }}>
-              Stops in LIFO order
-            </h2>
+      <div className="dock-layout">
+        <section className="dock-sequence-panel" aria-label="Load sequence">
+          <div className="store-panel-head">
+            <div>
+              <span className="wp-label">Reverse Load</span>
+              <h2 className="wp-headline-sm store-panel-title">Stops in LIFO order</h2>
+            </div>
+            <span className="wp-subtext store-panel-count">6 lines</span>
           </div>
-          <span className="wp-subtext store-panel-count" style={{ fontSize: "0.75rem" }}>
-            {lines.length} lines total
-          </span>
-        </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {lines.map((line) => (
-            <article
-              key={line.id}
-              style={{
-                padding: "1rem",
-                border: line.verified
-                  ? "1px solid var(--wp-success, #22c55e)"
-                  : line.isAlert
-                  ? "1px solid var(--wp-warning, #f59e0b)"
-                  : "1px solid var(--wp-border-color, #e2e8f0)",
-                background: line.verified ? "var(--wp-card-bg, #f0fdf4)" : "var(--wp-panel-bg)",
-                borderRadius: "var(--wp-radius-sm, 6px)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "1rem",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <input
-                  type="checkbox"
-                  checked={line.verified}
-                  onChange={() => toggleVerify(line.id)}
-                  style={{ width: "1.2rem", height: "1.2rem", cursor: "pointer" }}
-                />
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span className="wp-label" style={{ fontSize: "0.7rem" }}>
-                      {line.stopName}
-                    </span>
-                    {line.isAlert && (
-                      <span className="mc-pill mc-pill-warn" style={{ fontSize: "0.65rem" }}>
-                        Dock Shortfall
-                      </span>
-                    )}
+          <div id="dock-load-list" className="dock-load-list">
+            {stops.map((stop) => (
+              <article key={stop.step} className={`dock-stop ${stop.isAlert ? 'is-alert' : ''}`}>
+                <header className="dock-stop-header">
+                  <span className="dock-step">{stop.step}</span>
+                  <div className="dock-stop-copy">
+                    <span className="wp-label">{stop.label}</span>
+                    <strong>{stop.title}</strong>
                   </div>
-                  <strong style={{ display: "block", fontSize: "0.95rem", margin: "0.15rem 0" }}>
-                    {line.name}
-                  </strong>
-                  <span className="font-mono wp-subtext" style={{ fontSize: "0.75rem" }}>
-                    {line.sku} · {line.qty}
+                  <span className="wp-window-pill">
+                    <Clock size={12} /> {stop.window}
                   </span>
-                </div>
-              </div>
+                </header>
 
-              <div style={{ textAlign: "right" }}>
-                <span
-                  className={`wp-badge ${
-                    line.temp.includes("Frozen")
-                      ? "wp-badge-info"
-                      : line.temp.includes("Chilled")
-                      ? "wp-badge-success"
-                      : ""
-                  }`}
-                  style={{ fontSize: "0.7rem" }}
-                >
-                  {line.temp}
-                </span>
-                <span className="wp-subtext" style={{ display: "block", fontSize: "0.72rem", marginTop: "0.25rem" }}>
-                  {line.verified ? "Verified Loaded" : "Pending Scan"}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Barcode Scanner Modal Simulator */}
-      {isScannerOpen && (
-        <div className="wp-command-backdrop" style={{ display: "block" }}>
-          <div className="wp-command-dialog" style={{ padding: "1.5rem" }}>
-            <h2 className="wp-headline-sm" style={{ margin: "0 0 0.5rem" }}>
-              Laser Barcode &amp; QR Scanner
-            </h2>
-            <p className="wp-subtext">Scan cargo tote or case barcode on loading bay 04 conveyor.</p>
-
-            {scanFeedback && (
-              <div
-                style={{
-                  padding: "0.6rem 0.85rem",
-                  background: scanFeedback.startsWith("✓") ? "#f0fdf4" : "#fef2f2",
-                  borderRadius: "4px",
-                  fontSize: "0.85rem",
-                  margin: "0.75rem 0",
-                }}
-              >
-                {scanFeedback}
-              </div>
-            )}
-
-            <form onSubmit={handleSimulateScan} style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <div className="wp-field">
-                <label style={{ display: "block", marginBottom: "0.25rem", fontSize: "0.8rem" }}>
-                  Scan Barcode SKU
-                </label>
-                <input
-                  className="wp-input font-mono"
-                  placeholder="e.g. SKU_FZ_VEG_01"
-                  value={scannedSku}
-                  onChange={(e) => setScannedSku(e.target.value)}
-                  autoFocus
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", fontSize: "0.75rem" }}>
-                <span className="wp-subtext">Quick test SKUs:</span>
-                {lines.map((l) => (
-                  <button
-                    key={l.sku}
-                    type="button"
-                    className="mc-link"
-                    style={{ background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-                    onClick={() => setScannedSku(l.sku)}
-                  >
-                    {l.sku}
-                  </button>
+                {stop.lines.map((line) => (
+                  <div key={line.id} className={`dock-load-line ${line.isShort ? 'is-short' : ''}`}>
+                    <input
+                      type="checkbox"
+                      id={line.id}
+                      checked={line.verified}
+                      onChange={() => toggleCheck(line.id)}
+                      aria-label={`Verify ${line.name}`}
+                    />
+                    <img src={line.img} className="wp-product-thumb" alt={line.name} />
+                    <div className="dock-load-copy">
+                      <span className="dock-load-name">{line.name}</span>
+                      <span className="font-mono dock-load-sku">{line.sku}</span>
+                    </div>
+                    <div className="dock-load-meta">
+                      <span className="font-mono dock-load-qty">{line.qty}</span>
+                      {line.isShort ? (
+                        <span className="wp-flag wp-flag-error">{line.shortLabel}</span>
+                      ) : (
+                        <span className={`wp-badge ${line.tempBadgeClass}`}>{line.temp}</span>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-              <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <button type="submit" className="wp-btn wp-btn-primary" style={{ flex: 1 }}>
-                  Confirm Scan
+        <aside className="dock-side" aria-label="Bay notes">
+          <div className="dock-side-card">
+            <span className="wp-label">Open issue</span>
+            <h2 className="wp-headline-sm store-panel-title">3 milk cases missing</h2>
+            <p className="wp-subtext dock-side-copy">Stop 2, OUT004 Colombo 07. Chilled bay count is 12 of 15 cases.</p>
+            <Link href="/loader/shortfall" className="wp-btn wp-btn-primary">
+              <AlertTriangle size={15} />
+              <span>Report Shortfall</span>
+            </Link>
+          </div>
+
+          <div className="dock-side-card">
+            <span className="wp-label">Compartments</span>
+            <h2 className="wp-headline-sm store-panel-title">Hino 700 · 16T</h2>
+            <ul className="dock-temp-list">
+              <li><span>Frozen</span><strong>12 cases</strong></li>
+              <li><span>Chilled</span><strong>20 cases + 4,850 kg</strong></li>
+              <li><span>Ambient</span><strong>20 sacks + 2,100 kg</strong></li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      {/* Barcode Scanner Modal */}
+      {scannerOpen && (
+        <div className="wp-drawer-backdrop" style={{ display: 'block' }}>
+          <div className="wp-dialog" style={{ maxWidth: 440, margin: '10vh auto', padding: '1.5rem', background: 'var(--wp-panel)', borderRadius: 'var(--radius-md)' }}>
+            <div className="wp-flex-between" style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ScanBarcode size={20} color="var(--wp-primary)" />
+                <h3 className="wp-title-md" style={{ margin: 0 }}>Simulate Dock Scan</h3>
+              </div>
+              <button
+                type="button"
+                className="wp-icon-btn"
+                onClick={() => setScannerOpen(false)}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleBarcodeSubmit}>
+              <p className="wp-subtext" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                Type or scan SKU code (e.g. SKU-FZ-VEG-01, SKU-CH-YOG-02, SKU-AM-RICE-05):
+              </p>
+              <input
+                type="text"
+                className="wp-input"
+                placeholder="Enter or scan SKU..."
+                value={scannedInput}
+                onChange={(e) => setScannedInput(e.target.value)}
+                autoFocus
+                style={{ width: '100%', marginBottom: '1rem' }}
+              />
+
+              {scanMessage && (
+                <div style={{ padding: '0.5rem 0.75rem', marginBottom: '1rem', background: 'var(--wp-subpanel)', borderRadius: 4, fontSize: '0.75rem' }}>
+                  {scanMessage}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="wp-btn wp-btn-outline"
+                  onClick={() => setScannerOpen(false)}
+                >
+                  Done
                 </button>
-                <button type="button" className="wp-btn wp-btn-outline" onClick={() => setIsScannerOpen(false)}>
-                  Close Scanner
+                <button type="submit" className="wp-btn wp-btn-primary">
+                  Verify SKU
                 </button>
               </div>
             </form>
