@@ -139,8 +139,8 @@ During the transition from the Day 5 Designathon specification to production dep
 * **Offline First Resilience & Conflict Reconciliation**:
   Equipped mobile views with Serwist service worker precaching and IndexedDB mutation queues, enabling drivers to complete deliveries and capture signatures in offline basement loading docks. Upon reconnection, an automated reconciliation algorithm resolves discrepancies against central records.
 
-* **Standalone Production Containerization**:
-  Configured Next.js standalone build output, reducing container image size and dependencies while improving boot times and memory efficiency.
+* **Production Runtime Standardization (`next start`)**:
+  Standardized on the official, first-class Next.js production runtime (`next start`), ensuring atomic static asset delivery directly from `.next/static` with strict MIME compliance, zero risk of client-side hydration drops, and seamless container execution across all deployment targets.
 
 ---
 
