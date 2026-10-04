@@ -17,19 +17,6 @@ Waypoint is an enterprise grade shared logistics optimization and fleet manageme
 * **Relational Data Model & ERD**: [docs/data_model.md](docs/data_model.md)
 * **AI Tool & Solver Disclosure**: [docs/ai_disclosure.md](docs/ai_disclosure.md)
 
-### Seeded Demonstration Accounts
-
-All seeded demonstration accounts use the verified password: `REDACTED`
-
-| Role | Seeded Email (Primary / Alternative) | Default Password | Primary Responsibilities | Target View |
-|---|---|---|---|---|
-| **Dispatcher** | `dispatcher@waypoint.test` <br/>`dispatcher@waypoint.knurdz.org` | `REDACTED` | Post cutoff optimization, fleet board, live GPS map | `/dispatcher` |
-| **Warehouse Loader** | `loader@waypoint.test` <br/>`loader@waypoint.knurdz.org` | `REDACTED` | Loading dock staging, reverse LIFO sequence, damage reporting | `/loader` |
-| **Delivery Driver** | `driver@waypoint.test` <br/>`driver@waypoint.knurdz.org` | `REDACTED` | Route manifest, real time GPS beacon, offline touch POD | `/driver/route` |
-| **Store Manager** | `store@waypoint.test` <br/>`store@waypoint.knurdz.org` | `REDACTED` | Daily order placement, 16:00 cutoff alerts, receipt sign off | `/store` |
-
-*Note: The login screen provides a standard enterprise sign-in interface. Evaluators can authenticate using any seeded account above.*
-
 ---
 
 ## 1. Single Command Docker Deployment (Clean Machine Evaluation)
@@ -70,25 +57,25 @@ docker compose down
 Follow this 6 step end to end workflow to test the complete logistics lifecycle:
 
 ### Step 1: Store Order Placement
-1. Navigate to `/login` and select **Store Manager** (`store@waypoint.test`).
+1. Navigate to `/login` and sign in with the assigned **Store Manager** credentials.
 2. On `/store`, review cool room capacity utilization (74%) and upcoming deliveries.
 3. Click **Place Order**, enter ambient goods (Bread loaves, organic rice) and chilled goods (Dairy cases, curd).
 4. Submit the order. Notice that orders submitted before 16:00 SLST receive instant confirmation and are queued in PostgreSQL for the morning run.
 
 ### Step 2: Dispatcher Optimization & Allocation
-1. Log in as **Dispatcher** (`dispatcher@waypoint.test`).
+1. Sign in with the **Dispatcher** credentials.
 2. Navigate to **Order Queue** (`/dispatcher/orders`). Review the unallocated orders across Colombo, Gampaha, and Kandy.
 3. Click **Run Recommendation** (or navigate to `/dispatcher/allocation`). The system passes candidate orders and available vehicles to the FastAPI mathematical constraint solver.
 4. Review generated trips, vehicle fill rates, and constraint compliance scores.
 
 ### Step 3: Warehouse Loading & LIFO Sequencing
-1. Log in as **Warehouse Loader** (`loader@waypoint.test`).
+1. Sign in with the **Warehouse Loader** credentials.
 2. On `/loader`, select an active loading run (e.g. `Trip 1 · VEH037`).
 3. Verify the reverse load sequencing (last delivery stop loaded first into the chassis).
 4. Confirm crate verification checklists and report any dock exceptions.
 
 ### Step 4: Driver GPS Telemetry & Proof of Delivery (POD)
-1. Log in as **Delivery Driver** (`driver@waypoint.test`) on `/driver/route` (optimized for 390px mobile viewports).
+1. Sign in with the **Delivery Driver** credentials on `/driver/route` (optimized for 390px mobile viewports).
 2. Observe the **GPS Telemetry Active** indicator in the toolbar: the device streams real browser geolocation fixes (`navigator.geolocation`) to the backend telemetry engine.
 3. Tap **Capture POD** on Stop 1 (`/driver/pod`), capture a digital touch signature and photo POD, and confirm delivery.
 4. Notice that Stop 1 updates to **Delivered**, and delivery completion timestamps are written to PostgreSQL.
@@ -101,7 +88,7 @@ Follow this 6 step end to end workflow to test the complete logistics lifecycle:
 5. Toggle between **Sri Lanka Map** and **Corridor Schematic** to compare geographic and topological perspectives.
 
 ### Step 6: Store Goods Receipt Closeout
-1. Switch back to **Store Manager** (`store@waypoint.test`) on `/store`.
+1. Switch back to **Store Manager** on `/store`.
 2. Inspect the delivered run, review the driver's submitted POD signature, and close out the delivery receipt.
 
 ---
