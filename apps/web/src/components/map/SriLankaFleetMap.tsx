@@ -58,15 +58,6 @@ export default function SriLankaFleetMap({
       // Dynamically import Leaflet to support Next.js SSR cleanly
       const L = (await import('leaflet')).default;
 
-      // Ensure leaflet CSS is present
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-      }
-
       if (!isMounted || !containerRef.current) return;
 
       // Initialize map centered on Sri Lanka Western corridor

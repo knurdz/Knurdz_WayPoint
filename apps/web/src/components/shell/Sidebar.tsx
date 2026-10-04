@@ -124,14 +124,14 @@ export default function Sidebar({
     return () => clearInterval(interval);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {
       // ignore
     }
-    router.push('/login');
-    router.refresh();
+    window.location.href = '/login';
   };
 
   let items = DISPATCHER_ITEMS;
@@ -258,8 +258,8 @@ export default function Sidebar({
               </div>
             </div>
           </div>
-          <button
-            type="button"
+          <a
+            href="/api/auth/logout"
             onClick={handleLogout}
             title="Log out"
             style={{
@@ -273,7 +273,7 @@ export default function Sidebar({
             }}
           >
             <LogOut size={15} />
-          </button>
+          </a>
         </div>
       </div>
     </aside>
