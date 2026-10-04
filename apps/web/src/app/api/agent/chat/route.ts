@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { COPILOT_KNOWLEDGE_BASE } from '@/lib/copilot_kb';
 import { checkRateLimit } from '@/lib/rate_limiter';
+import { executeVoiceTool } from '@/lib/agent_tools';
 
 interface ActionPayload {
   id: string;
@@ -159,6 +160,17 @@ export async function POST(req: Request) {
 
     if (!query) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    }
+
+    // Check real time voice telemetry tools first
+    const voiceToolResult = executeVoiceTool(query);
+    if (voiceToolResult.matched && voiceToolResult.spokenReply) {
+      return NextResponse.json({
+        reply: voiceToolResult.spokenReply,
+        action: voiceToolResult.action || null,
+        telemetryData: voiceToolResult.telemetryData || null,
+        toolName: voiceToolResult.toolName,
+      });
     }
 
     // Check pre configured intent patterns
