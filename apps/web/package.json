@@ -16,6 +16,7 @@
     "@waypoint/types": "workspace:*",
     "idb": "^8.0.2",
     "jose": "^6.2.12",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.16.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

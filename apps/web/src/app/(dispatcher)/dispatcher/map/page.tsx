@@ -2,14 +2,38 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Volume2, VolumeX, Radio, AlertTriangle } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Volume2, VolumeX, Radio, AlertTriangle, Map, Compass } from 'lucide-react';
 import { MapVehicle } from '@/app/api/dispatcher/map/route';
 import { useFullDuplexVoice } from '@/hooks/useFullDuplexVoice';
+
+const SriLankaFleetMap = dynamic(
+  () => import('@/components/map/SriLankaFleetMap'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        style={{
+          height: '480px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--wp-panel-bg, #f8fafc)',
+          color: 'var(--wp-text-muted, #64748b)',
+          fontSize: '0.85rem',
+        }}
+      >
+        Initializing Sri Lanka Geographic Fleet Telemetry...
+      </div>
+    ),
+  },
+);
 
 export default function DispatcherLiveMapPage() {
   const [vehicles, setVehicles] = useState<MapVehicle[]>([]);
   const [selectedId, setSelectedId] = useState<string>('VEH037');
   const [loading, setLoading] = useState(true);
+  const [mapMode, setMapMode] = useState<'geographic' | 'schematic'>('geographic');
   const { speak, isSpeaking, cancelSpeech } = useFullDuplexVoice();
 
   const loadMapData = useCallback(async (signal?: AbortSignal) => {
@@ -33,12 +57,14 @@ export default function DispatcherLiveMapPage() {
   useEffect(() => {
     const controller = new AbortController();
     loadMapData(controller.signal);
+    const interval = setInterval(() => {
+      loadMapData();
+    }, 5000); // Polling telemetry updates every 5s
     return () => {
       controller.abort();
+      clearInterval(interval);
     };
   }, [loadMapData]);
-
-
 
   const selectedVeh = vehicles.find((v) => v.id === selectedId) || vehicles[0];
 
@@ -61,15 +87,69 @@ export default function DispatcherLiveMapPage() {
       {/* Header */}
       <div className="screen-page-header">
         <div>
-          <span className="wp-label">DISP 08 · Today only</span>
+          <span className="wp-label">DISP 08 · Real-Time Sri Lanka Fleet Telemetry</span>
           <h1 className="wp-headline-md" style={{ margin: '0.35rem 0 0' }}>
             {selectedVeh
               ? `${selectedVeh.name} · ${selectedVeh.routeId} · ${selectedVeh.completedStops} / ${selectedVeh.totalStops} stops`
               : 'Fleet Live Map'}
           </h1>
-          <p className="wp-subtext">All vehicles on corridor · marker shape by chassis type · thermal overlay</p>
+          <p className="wp-subtext">
+            PickMe / Uber precision telemetry · Satellite GPS & predictive route interpolation
+          </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Map View Mode Switcher */}
+          <div
+            style={{
+              display: 'inline-flex',
+              padding: '2px',
+              borderRadius: '6px',
+              background: 'var(--wp-border-color, #e2e8f0)',
+              gap: '2px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setMapMode('geographic')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                background: mapMode === 'geographic' ? '#ffffff' : 'transparent',
+                color: mapMode === 'geographic' ? 'var(--wp-primary)' : 'inherit',
+                boxShadow: mapMode === 'geographic' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <Compass size={13} /> Sri Lanka Map
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapMode('schematic')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                background: mapMode === 'schematic' ? '#ffffff' : 'transparent',
+                color: mapMode === 'schematic' ? 'var(--wp-primary)' : 'inherit',
+                boxShadow: mapMode === 'schematic' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <Map size={13} /> Corridor Schematic
+            </button>
+          </div>
+
           <span className="wp-chassis-chip wp-chassis-chip--truck">Dry truck</span>
           <span className="wp-chassis-chip wp-chassis-chip--truck_freezer">Truck + freezer</span>
           <span className="wp-chassis-chip wp-chassis-chip--van_freezer">Van + freezer</span>
@@ -83,109 +163,122 @@ export default function DispatcherLiveMapPage() {
         </div>
       </div>
 
+
       <div
         className="wp-fleet-map-layout"
         style={{ display: 'grid', gridTemplateColumns: '2.2fr 1fr', gap: '1.25rem' }}
       >
-        {/* Map SVG Stage */}
-        <section className="wp-panel screen-panel" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
-          <div className="wp-corridor-map" style={{ width: '100%', height: '100%', minHeight: '440px' }}>
-            <svg
-              viewBox="0 0 800 420"
-              style={{ width: '100%', height: '100%', display: 'block' }}
-              role="img"
-              aria-label="Fleet map showing all active vehicles on Colombo coastal corridor"
-            >
-              <defs>
-                <pattern id="fleetGrid" width="32" height="32" patternUnits="userSpaceOnUse">
-                  <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#D7E2EA" strokeWidth="0.75" />
-                </pattern>
-              </defs>
-              <rect width="800" height="420" fill="#EEF3F6" />
-              <rect width="800" height="420" fill="url(#fleetGrid)" opacity="0.55" />
-              <path d="M0,300 Q200,260 400,280 T800,310 L800,420 L0,420 Z" fill="#D5E6EE" />
-              <path
-                d="M60,200 Q280,180 520,195 T760,210"
-                fill="none"
-                stroke="#C5D0D8"
-                strokeWidth="6"
-                strokeLinecap="round"
-              />
-              <path d="M80,200 L240,190" stroke="#16A34A" strokeWidth="4" fill="none" />
-              <path d="M240,190 Q400,185 560,200" stroke="#377a8b" strokeWidth="4" fill="none" />
-              <path
-                d="M560,200 Q680,210 760,215"
-                stroke="#CBD5E1"
-                strokeWidth="4"
-                fill="none"
-                strokeDasharray="8 6"
-              />
+        {/* Map Stage: Geographic Sri Lanka Map or Schematic Corridor */}
+        <section
+          className="wp-panel screen-panel"
+          style={{ padding: 0, overflow: 'hidden', position: 'relative', minHeight: '480px' }}
+        >
+          {mapMode === 'geographic' ? (
+            <SriLankaFleetMap
+              vehicles={vehicles}
+              selectedVehicleId={selectedId}
+              onSelectVehicle={setSelectedId}
+            />
+          ) : (
+            <div className="wp-corridor-map" style={{ width: '100%', height: '100%', minHeight: '440px' }}>
+              <svg
+                viewBox="0 0 800 420"
+                style={{ width: '100%', height: '100%', display: 'block' }}
+                role="img"
+                aria-label="Fleet map showing all active vehicles on Colombo coastal corridor"
+              >
+                <defs>
+                  <pattern id="fleetGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+                    <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#D7E2EA" strokeWidth="0.75" />
+                  </pattern>
+                </defs>
+                <rect width="800" height="420" fill="#EEF3F6" />
+                <rect width="800" height="420" fill="url(#fleetGrid)" opacity="0.55" />
+                <path d="M0,300 Q200,260 400,280 T800,310 L800,420 L0,420 Z" fill="#D5E6EE" />
+                <path
+                  d="M60,200 Q280,180 520,195 T760,210"
+                  fill="none"
+                  stroke="#C5D0D8"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                />
+                <path d="M80,200 L240,190" stroke="#16A34A" strokeWidth="4" fill="none" />
+                <path d="M240,190 Q400,185 560,200" stroke="#377a8b" strokeWidth="4" fill="none" />
+                <path
+                  d="M560,200 Q680,210 760,215"
+                  stroke="#CBD5E1"
+                  strokeWidth="4"
+                  fill="none"
+                  strokeDasharray="8 6"
+                />
 
-              {/* Animated corridor breadcrumbs behind vehicles */}
-              {vehicles.map((v) =>
-                (v.breadcrumbs || []).map((b, idx) => (
-                  <circle
-                    key={`${v.id}-crumb-${idx}`}
-                    cx={b.x}
-                    cy={b.y}
-                    r={2.5}
-                    fill={v.color}
-                    opacity={b.opacity}
-                  />
-                ))
-              )}
+                {/* Animated corridor breadcrumbs behind vehicles */}
+                {vehicles.map((v) =>
+                  (v.breadcrumbs || []).map((b, idx) => (
+                    <circle
+                      key={`${v.id}-crumb-${idx}`}
+                      cx={b.x}
+                      cy={b.y}
+                      r={2.5}
+                      fill={v.color}
+                      opacity={b.opacity}
+                    />
+                  ))
+                )}
 
-              {/* Vehicles on corridor */}
-              {vehicles.map((v) => {
-                const isSelected = selectedId === v.id;
-                const isBreach = v.coldChainStatus === 'breach';
-                return (
-                  <g
-                    key={v.id}
-                    className={`wp-fleet-map-vehicle ${isSelected ? 'is-selected' : ''}`}
-                    transform={`translate(${v.x}, ${v.y})`}
-                    onClick={() => setSelectedId(v.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {isSelected && (
-                      <circle r="20" fill="none" stroke={isBreach ? '#ef4444' : '#377a8b'} strokeWidth="2" opacity="0.6">
-                        <animate attributeName="r" values="14;24;14" dur="2s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                    {isBreach && !isSelected && (
-                      <circle r="18" fill="none" stroke="#ef4444" strokeWidth="2" opacity="0.8">
-                        <animate attributeName="r" values="12;20;12" dur="1.2s" repeatCount="indefinite" />
-                      </circle>
-                    )}
-                    {v.markerType === 'circle' ? (
-                      <circle r="12" fill={v.color} />
-                    ) : (
-                      <rect
-                        x="-14"
-                        y="-10"
-                        width="28"
-                        height="20"
-                        rx="4"
-                        fill={v.color}
-                        opacity={v.id === 'VEH005' ? 0.6 : 1}
-                      />
-                    )}
-                    <text
-                      fill="#fff"
-                      fontFamily="JetBrains Mono, monospace"
-                      fontSize="7"
-                      fontWeight="700"
-                      textAnchor="middle"
-                      y="3"
+                {/* Vehicles on corridor */}
+                {vehicles.map((v) => {
+                  const isSelected = selectedId === v.id;
+                  const isBreach = v.coldChainStatus === 'breach';
+                  return (
+                    <g
+                      key={v.id}
+                      className={`wp-fleet-map-vehicle ${isSelected ? 'is-selected' : ''}`}
+                      transform={`translate(${v.x}, ${v.y})`}
+                      onClick={() => setSelectedId(v.id)}
+                      style={{ cursor: 'pointer' }}
                     >
-                      {v.code}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
+                      {isSelected && (
+                        <circle r="20" fill="none" stroke={isBreach ? '#ef4444' : '#377a8b'} strokeWidth="2" opacity="0.6">
+                          <animate attributeName="r" values="14;24;14" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                      )}
+                      {isBreach && !isSelected && (
+                        <circle r="18" fill="none" stroke="#ef4444" strokeWidth="2" opacity="0.8">
+                          <animate attributeName="r" values="12;20;12" dur="1.2s" repeatCount="indefinite" />
+                        </circle>
+                      )}
+                      {v.markerType === 'circle' ? (
+                        <circle r="12" fill={v.color} />
+                      ) : (
+                        <rect
+                          x="-14"
+                          y="-10"
+                          width="28"
+                          height="20"
+                          rx="4"
+                          fill={v.color}
+                          opacity={v.id === 'VEH005' ? 0.6 : 1}
+                        />
+                      )}
+                      <text
+                        fill="#fff"
+                        fontFamily="JetBrains Mono, monospace"
+                        fontSize="7"
+                        fontWeight="700"
+                        textAnchor="middle"
+                        y="3"
+                      >
+                        {v.code}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          )}
         </section>
+
 
         {/* Sidebar Roster & Details */}
         <aside className="wp-panel screen-panel" style={{ padding: '1.25rem' }}>
@@ -349,6 +442,22 @@ export default function DispatcherLiveMapPage() {
                   <span style={{ color: 'var(--wp-text-muted)' }}>Speed:</span>
                   <span style={{ fontWeight: 600 }}>{selectedVeh.speedKmH} km/h</span>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--wp-text-muted)' }}>Telemetry Mode:</span>
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontSize: '0.7rem',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      background: selectedVeh.telemetrySource === 'LIVE_GPS' ? '#dcfce7' : '#e0f2fe',
+                      color: selectedVeh.telemetrySource === 'LIVE_GPS' ? '#15803d' : '#0369a1',
+                    }}
+                  >
+                    {selectedVeh.telemetryBadge || (selectedVeh.telemetrySource === 'LIVE_GPS' ? 'Satellite GPS' : 'Predictive Interpolation')}
+                  </span>
+                </div>
+
                 {selectedVeh.chilledTempC !== undefined && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'var(--wp-text-muted)' }}>Thermal Status:</span>
