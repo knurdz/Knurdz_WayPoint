@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import { IN_MEMORY_FLEET_TELEMETRY } from '@/lib/agent_tools';
+import { prisma, ensureInitialOrders, StopStatus } from '@waypoint/database';
+import { getVehicleResolvedPosition, getOutletLocation, DEPOT_COORDINATES } from '@/lib/geo_telemetry';
 
 export interface MapBreadcrumb {
-  x: number;
-  y: number;
+  lat: number;
+  lng: number;
+  x?: number;
+  y?: number;
   opacity: number;
 }
 
@@ -17,8 +20,13 @@ export interface MapVehicle {
   chassisLabel: string;
   markerType: 'rect' | 'circle';
   color: string;
+  lat: number;
+  lng: number;
   x: number;
   y: number;
+  heading: number;
+  telemetrySource: 'LIVE_GPS' | 'PREDICTIVE_INTERPOLATION';
+  telemetryBadge: string;
   completedStops: number;
   totalStops: number;
   isOnline: boolean;
@@ -35,233 +43,232 @@ export interface MapVehicle {
     outletName: string;
     status: 'Delivered' | 'Pending' | 'EnRoute';
     eta: string;
+    lat: number;
+    lng: number;
   }[];
 }
 
-const baseFleetVehicles: MapVehicle[] = [
-  {
-    id: 'VEH037',
-    name: 'VEH037',
-    code: '037',
-    driverName: 'Kamal Silva',
-    routeId: 'R025229',
-    chassis: 'van_freezer',
-    chassisLabel: 'Van + Freezer',
-    markerType: 'circle',
-    color: '#16a34a',
-    x: 272,
-    y: 186,
-    completedStops: 2,
-    totalStops: 4,
-    isOnline: true,
-    statusText: 'Kamal Silva · 2/4 stops',
-    speedKmH: 36,
-    location: 'Kadugannawa Pass (Route R025229)',
-    chilledTempC: 3.4,
-    frozenTempC: -19.2,
-    coldChainStatus: 'nominal',
-    breadcrumbs: [
-      { x: 190, y: 190, opacity: 0.25 },
-      { x: 220, y: 188, opacity: 0.5 },
-      { x: 248, y: 187, opacity: 0.75 },
-    ],
-    stops: [
-      { stopNumber: 1, outletCode: 'OUT001', outletName: 'Fresh Galle Rd', status: 'Delivered', eta: '05:45 SLST' },
-      { stopNumber: 2, outletCode: 'OUT003', outletName: 'Peradeniya Store', status: 'Delivered', eta: '06:35 SLST' },
-      { stopNumber: 3, outletCode: 'OUT004', outletName: 'Kandy Mall', status: 'Pending', eta: '07:15 SLST' },
-      { stopNumber: 4, outletCode: 'OUT008', outletName: 'Katugastota', status: 'Pending', eta: '07:50 SLST' },
-    ],
-  },
-  {
-    id: 'VEH004',
-    name: 'VEH004',
-    code: '004',
-    driverName: 'Niroshan Bandara',
-    routeId: 'R025210',
-    chassis: 'truck_freezer',
-    chassisLabel: 'Truck + Freezer',
-    markerType: 'rect',
-    color: '#ef4444',
-    x: 96,
-    y: 188,
-    completedStops: 0,
-    totalStops: 5,
-    isOnline: true,
-    statusText: 'Loading · Bay 04 Shortfall',
-    speedKmH: 0,
-    location: 'Peliyagoda Loading Dock Bay 04',
-    chilledTempC: 5.8,
-    frozenTempC: -17.8,
-    coldChainStatus: 'breach',
-    breadcrumbs: [
-      { x: 70, y: 192, opacity: 0.4 },
-      { x: 84, y: 190, opacity: 0.7 },
-    ],
-    stops: [
-      { stopNumber: 1, outletCode: 'OUT005', outletName: 'Peliyagoda Hub', status: 'EnRoute', eta: '06:30 SLST' },
-      { stopNumber: 2, outletCode: 'OUT006', outletName: 'Wattala Express', status: 'Pending', eta: '07:10 SLST' },
-      { stopNumber: 3, outletCode: 'OUT007', outletName: 'Ja Ela Super', status: 'Pending', eta: '07:45 SLST' },
-    ],
-  },
-  {
-    id: 'VEH002',
-    name: 'VEH002',
-    code: '002',
-    driverName: 'Dinesh Priyantha',
-    routeId: 'R025214',
-    chassis: 'van_freezer',
-    chassisLabel: 'Van + Freezer',
-    markerType: 'circle',
-    color: '#16a34a',
-    x: 176,
-    y: 232,
-    completedStops: 4,
-    totalStops: 4,
-    isOnline: false,
-    statusText: 'Dinesh · 4/4 done',
-    speedKmH: 0,
-    location: 'Dehiwala Outlet Depot',
-    chilledTempC: 2.8,
-    frozenTempC: -18.5,
-    coldChainStatus: 'nominal',
-    breadcrumbs: [
-      { x: 120, y: 220, opacity: 0.3 },
-      { x: 148, y: 226, opacity: 0.6 },
-    ],
-    stops: [
-      { stopNumber: 1, outletCode: 'OUT002', outletName: 'Duplication Rd', status: 'Delivered', eta: '05:15 SLST' },
-      { stopNumber: 2, outletCode: 'OUT009', outletName: 'Bambalapitiya', status: 'Delivered', eta: '05:50 SLST' },
-      { stopNumber: 3, outletCode: 'OUT010', outletName: 'Wellawatte', status: 'Delivered', eta: '06:20 SLST' },
-      { stopNumber: 4, outletCode: 'OUT011', outletName: 'Dehiwala', status: 'Delivered', eta: '06:55 SLST' },
-    ],
-  },
-  {
-    id: 'VEH001',
-    name: 'VEH001',
-    code: '001',
-    driverName: 'Sunil Mendis',
-    routeId: 'R025208',
-    chassis: 'truck',
-    chassisLabel: 'Dry Truck',
-    markerType: 'rect',
-    color: '#64748b',
-    x: 416,
-    y: 192,
-    completedStops: 3,
-    totalStops: 6,
-    isOnline: true,
-    statusText: 'Sunil Mendis · 3/6 stops',
-    speedKmH: 48,
-    location: 'Peliyagoda Expressway Corridor',
-    coldChainStatus: 'nominal',
-    breadcrumbs: [
-      { x: 330, y: 188, opacity: 0.3 },
-      { x: 365, y: 190, opacity: 0.55 },
-      { x: 395, y: 191, opacity: 0.8 },
-    ],
-    stops: [
-      { stopNumber: 1, outletCode: 'OUT012', outletName: 'Kelaniya', status: 'Delivered', eta: '05:20 SLST' },
-      { stopNumber: 2, outletCode: 'OUT013', outletName: 'Kiribathgoda', status: 'Delivered', eta: '05:55 SLST' },
-      { stopNumber: 3, outletCode: 'OUT014', outletName: 'Kadawatha', status: 'Delivered', eta: '06:30 SLST' },
-      { stopNumber: 4, outletCode: 'OUT015', outletName: 'Gampaha', status: 'EnRoute', eta: '07:15 SLST' },
-    ],
-  },
-  {
-    id: 'VEH003',
-    name: 'VEH003',
-    code: '003',
-    driverName: 'Kamal Perera',
-    routeId: 'R025218',
-    chassis: 'truck_freezer',
-    chassisLabel: 'Truck + Freezer',
-    markerType: 'rect',
-    color: '#377a8b',
-    x: 544,
-    y: 198,
-    completedStops: 1,
-    totalStops: 5,
-    isOnline: true,
-    statusText: 'Kamal Perera · 1/5 stops',
-    speedKmH: 34,
-    location: 'Kandy Road Kadawatha',
-    chilledTempC: 3.4,
-    frozenTempC: -18.2,
-    coldChainStatus: 'nominal',
-    breadcrumbs: [
-      { x: 470, y: 194, opacity: 0.25 },
-      { x: 500, y: 196, opacity: 0.5 },
-      { x: 526, y: 197, opacity: 0.75 },
-    ],
-    stops: [
-      { stopNumber: 1, outletCode: 'OUT016', outletName: 'Nittambuwa', status: 'Delivered', eta: '06:00 SLST' },
-      { stopNumber: 2, outletCode: 'OUT017', outletName: 'Waragoda', status: 'EnRoute', eta: '06:45 SLST' },
-    ],
-  },
-  {
-    id: 'VEH005',
-    name: 'VEH005',
-    code: '005',
-    driverName: 'Anura Kumara',
-    routeId: 'R025225',
-    chassis: 'truck_freezer',
-    chassisLabel: 'Truck + Freezer',
-    markerType: 'rect',
-    color: '#377a8b',
-    x: 624,
-    y: 128,
-    completedStops: 0,
-    totalStops: 4,
-    isOnline: true,
-    statusText: 'Planned · Trip 2',
-    speedKmH: 0,
-    location: 'Peliyagoda Depot Staging',
-    chilledTempC: 3.1,
-    frozenTempC: -18.8,
-    coldChainStatus: 'nominal',
-    breadcrumbs: [],
-    stops: [
-      { stopNumber: 1, outletCode: 'OUT018', outletName: 'Avissawella', status: 'Pending', eta: '08:00 SLST' },
-    ],
-  },
-];
-
 export async function GET() {
-  // Merge live dynamic telemetry from telemetry store
-  const enrichedVehicles = baseFleetVehicles.map((v) => {
-    // Map VEH003 to TRK002 in telemetry
-    if (v.id === 'VEH003' && IN_MEMORY_FLEET_TELEMETRY.TRK002) {
-      const live = IN_MEMORY_FLEET_TELEMETRY.TRK002;
-      return {
-        ...v,
-        speedKmH: live.speedKmH,
-        location: live.location,
-        chilledTempC: live.chilledTempC ?? v.chilledTempC,
-        coldChainStatus: live.coldChainStatus,
-        color: live.coldChainStatus === 'breach' ? '#ef4444' : v.color,
-        statusText:
-          live.coldChainStatus === 'breach'
-            ? 'Critical Temp Breach · 6.2 C'
-            : v.statusText,
+  try {
+    await ensureInitialOrders();
+
+    const trips = await prisma.trip.findMany({
+      include: {
+        stops: {
+          include: {
+            outlet: true,
+            order: true,
+            podRecords: true,
+          },
+          orderBy: { stopSequence: 'asc' },
+        },
+        vehicle: true,
+      },
+      orderBy: { tripId: 'asc' },
+    });
+
+    // Static metadata for vehicles
+    const vehicleMeta: Record<
+      string,
+      {
+        driverName: string;
+        chassis: 'truck' | 'truck_freezer' | 'van_freezer';
+        chassisLabel: string;
+        color: string;
+        chilledTempC?: number;
+        frozenTempC?: number;
+        coldChainStatus: 'nominal' | 'warning' | 'breach';
+        depot: string;
+      }
+    > = {
+      VEH037: {
+        driverName: 'Kamal Silva',
+        chassis: 'van_freezer',
+        chassisLabel: 'Van + Freezer',
+        color: '#16a34a',
+        chilledTempC: 3.4,
+        frozenTempC: -19.2,
+        coldChainStatus: 'nominal',
+        depot: 'Peliyagoda',
+      },
+      VEH004: {
+        driverName: 'Niroshan Bandara',
+        chassis: 'truck_freezer',
+        chassisLabel: 'Truck + Freezer',
+        color: '#377a8b',
+        chilledTempC: 4.1,
+        frozenTempC: -18.5,
+        coldChainStatus: 'nominal',
+        depot: 'Peliyagoda',
+      },
+      VEH001: {
+        driverName: 'Sunil Mendis',
+        chassis: 'truck',
+        chassisLabel: 'Dry Truck',
+        color: '#64748b',
+        depot: 'Kandy',
+        coldChainStatus: 'nominal',
+      },
+      VEH002: {
+        driverName: 'Dinesh Priyantha',
+        chassis: 'van_freezer',
+        chassisLabel: 'Van + Freezer',
+        color: '#16a34a',
+        chilledTempC: 2.8,
+        frozenTempC: -18.5,
+        coldChainStatus: 'nominal',
+        depot: 'Peliyagoda',
+      },
+      VEH003: {
+        driverName: 'Kamal Perera',
+        chassis: 'truck_freezer',
+        chassisLabel: 'Truck + Freezer',
+        color: '#377a8b',
+        chilledTempC: 3.4,
+        frozenTempC: -18.2,
+        coldChainStatus: 'nominal',
+        depot: 'Peliyagoda',
+      },
+      VEH005: {
+        driverName: 'Anura Kumara',
+        chassis: 'truck_freezer',
+        chassisLabel: 'Truck + Freezer',
+        color: '#377a8b',
+        chilledTempC: 3.1,
+        frozenTempC: -18.8,
+        coldChainStatus: 'nominal',
+        depot: 'Peliyagoda',
+      },
+    };
+
+    const targetVehicles = ['VEH037', 'VEH004', 'VEH001', 'VEH002', 'VEH003', 'VEH005'];
+
+    const formattedVehicles: MapVehicle[] = targetVehicles.map((vId) => {
+      const trip = trips.find((t) => t.vehicleId === vId);
+      const meta = vehicleMeta[vId] || {
+        driverName: 'Fleet Driver',
+        chassis: 'van_freezer' as const,
+        chassisLabel: 'Van + Freezer',
+        color: '#16a34a',
+        coldChainStatus: 'nominal' as const,
+        depot: 'Peliyagoda',
       };
-    }
 
-    // Map VEH001 to TRK001 in telemetry
-    if (v.id === 'VEH001' && IN_MEMORY_FLEET_TELEMETRY.TRK001) {
-      const live = IN_MEMORY_FLEET_TELEMETRY.TRK001;
+      const routeStops =
+        trip?.stops.map((s) => ({
+          outletId: s.outletId,
+          district: s.outlet?.district,
+        })) || [
+          { outletId: 'OUT001', district: 'Colombo' },
+          { outletId: 'OUT002', district: 'Colombo' },
+          { outletId: 'OUT003', district: 'Colombo' },
+        ];
+
+      // Resolve real position via Live GPS or Predictive Route Interpolation
+      const pos = getVehicleResolvedPosition(vId, meta.depot, routeStops);
+
+      const stopsData = routeStops.map((rs, idx) => {
+        const outletLoc = getOutletLocation(rs.outletId, rs.district);
+        const stopEntity = trip?.stops[idx];
+        const isDelivered =
+          stopEntity?.status === StopStatus.completed ||
+          (stopEntity?.podRecords && stopEntity.podRecords.length > 0);
+        const isEnRoute = stopEntity?.status === StopStatus.en_route || (!isDelivered && idx === 0);
+
+        let statusStr: 'Delivered' | 'Pending' | 'EnRoute' = 'Pending';
+        if (isDelivered) statusStr = 'Delivered';
+        else if (isEnRoute) statusStr = 'EnRoute';
+
+        return {
+          stopNumber: idx + 1,
+          outletCode: rs.outletId,
+          outletName: stopEntity?.outlet?.name || `Waypoint ${rs.outletId}`,
+          status: statusStr,
+          eta: stopEntity?.plannedArrival ? `${stopEntity.plannedArrival} SLST` : '06:15 SLST',
+          lat: outletLoc.lat,
+          lng: outletLoc.lng,
+        };
+      });
+
+      const completedStops = stopsData.filter((s) => s.status === 'Delivered').length;
+      const totalStops = stopsData.length;
+
+      // Projecting lat/lng to legacy 800x420 canvas for backward-compatible SVG stage
+      // Colombo/Kandy bounding box: lat ~ 6.8 to 7.4 -> y: 360 to 60; lng ~ 79.8 to 80.7 -> x: 80 to 720
+      const normX = Math.max(0, Math.min(1, (pos.lng - 79.8) / 0.9));
+      const normY = Math.max(0, Math.min(1, (7.35 - pos.lat) / 0.55));
+      const legacyX = Math.round(80 + normX * 640);
+      const legacyY = Math.round(50 + normY * 320);
+
+      const depotCoords = DEPOT_COORDINATES[meta.depot] || DEPOT_COORDINATES['Peliyagoda'];
+      const breadcrumbs: MapBreadcrumb[] = [
+        {
+          lat: +(depotCoords.lat + (pos.lat - depotCoords.lat) * 0.3).toFixed(6),
+          lng: +(depotCoords.lng + (pos.lng - depotCoords.lng) * 0.3).toFixed(6),
+          x: Math.round(legacyX - 60),
+          y: legacyY,
+          opacity: 0.3,
+        },
+        {
+          lat: +(depotCoords.lat + (pos.lat - depotCoords.lat) * 0.7).toFixed(6),
+          lng: +(depotCoords.lng + (pos.lng - depotCoords.lng) * 0.7).toFixed(6),
+          x: Math.round(legacyX - 25),
+          y: legacyY,
+          opacity: 0.65,
+        },
+      ];
+
+      const locationDescription = pos.isLive
+        ? `Live GPS Fix (${pos.lat.toFixed(4)}° N, ${pos.lng.toFixed(4)}° E)`
+        : meta.depot === 'Kandy'
+        ? `Kandy Central Corridor (${pos.lat.toFixed(4)}° N, ${pos.lng.toFixed(4)}° E)`
+        : `Colombo Coastal Corridor (${pos.lat.toFixed(4)}° N, ${pos.lng.toFixed(4)}° E)`;
+
       return {
-        ...v,
-        speedKmH: live.speedKmH,
-        location: live.location,
-        statusText: live.speedKmH === 0 ? 'Immobilized on Expressway' : v.statusText,
+        id: vId,
+        name: vId,
+        code: vId.replace('VEH', ''),
+        driverName: meta.driverName,
+        routeId: trip?.tripId || `R0252${vId.replace('VEH', '')}`,
+        chassis: meta.chassis,
+        chassisLabel: meta.chassisLabel,
+        markerType: meta.chassis.includes('truck') ? 'rect' : 'circle',
+        color: pos.isLive ? '#10b981' : meta.color,
+        lat: pos.lat,
+        lng: pos.lng,
+        x: legacyX,
+        y: legacyY,
+        heading: pos.heading,
+        telemetrySource: pos.isLive ? 'LIVE_GPS' : 'PREDICTIVE_INTERPOLATION',
+        telemetryBadge: pos.isLive ? 'Satellite GPS' : 'Predictive Interpolation',
+        completedStops,
+        totalStops,
+        isOnline: true,
+        statusText: `${meta.driverName} · ${completedStops}/${totalStops} stops · ${pos.speedKmH} km/h`,
+        speedKmH: pos.speedKmH,
+        location: locationDescription,
+        chilledTempC: meta.chilledTempC,
+        frozenTempC: meta.frozenTempC,
+        coldChainStatus: meta.coldChainStatus,
+        breadcrumbs,
+        stops: stopsData,
       };
-    }
+    });
 
-    return v;
-  });
-
-  return NextResponse.json({
-    corridorName: 'Colombo Coastal and Hill Country Corridor',
-    timestamp: new Date().toISOString(),
-    vehicles: enrichedVehicles,
-  });
+    return NextResponse.json({
+      corridorName: 'Sri Lanka Western & Central Logistics Network',
+      timestamp: new Date().toISOString(),
+      depots: [
+        { id: 'Peliyagoda', name: 'Peliyagoda Primary Hub', lat: 6.9654, lng: 79.8841 },
+        { id: 'Kandy', name: 'Kandy Regional Depot', lat: 7.2906, lng: 80.6337 },
+      ],
+      vehicles: formattedVehicles,
+    });
+  } catch (error) {
+    console.error('Failed to generate map telemetry:', error);
+    return NextResponse.json(
+      { error: 'Failed to retrieve fleet map telemetry', details: String(error) },
+      { status: 500 },
+    );
+  }
 }
