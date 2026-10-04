@@ -67,10 +67,13 @@ export default function SriLankaFleetMap({
         zoomControl: true,
       });
 
-      // CartoDB Positron / OSM tiles for crisp Uber/PickMe styled logistics view
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; CARTO',
-        subdomains: 'abcd',
+      // OpenStreetMap standard tile layer (100% free, public, zero API key required)
+      const tileUrl =
+        process.env.NEXT_PUBLIC_MAP_TILE_URL ||
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+      L.tileLayer(tileUrl, {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
 
