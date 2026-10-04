@@ -1,158 +1,189 @@
 # Waypoint Intelligent Enterprise
 ## Shared Distribution Logistics Platform · Tech Triathlon 2026
 
-Waypoint is an enterprise grade shared logistics optimization platform engineered for three retail brands (Waypoint Fresh, Waypoint Style, and Waypoint Tech). It coordinates 120 retail outlets, 2 central distribution depots (Peliyagoda and Kandy), and a dedicated 60 vehicle fleet across Sri Lanka under strict operational, cold chain, and regulatory constraints.
+Waypoint is an enterprise grade shared logistics optimization and fleet management platform engineered for three retail brands (Waypoint Fresh, Waypoint Style, and Waypoint Tech). It coordinates 100 retail outlets, 2 central distribution hubs (Peliyagoda and Kandy), and a dedicated 37 vehicle fleet across Sri Lanka under strict operational, cold chain, and regulatory constraints.
 
 ---
 
-## 1. Quickstart & Deployment
+## Submission Summary & Quick Reference
 
-### Option A: Automated Docker Deployment (Judges Fast Track)
+* **Public Production URL**: [https://waypoint.knurdz.org](https://waypoint.knurdz.org)
+* **Local Evaluation URL**: [http://localhost:3000](http://localhost:3000) or [http://localhost](http://localhost) (via Caddy Reverse Proxy)
+* **Demonstration Video**: [Tech Triathlon 2026 Demonstration Video](https://knurdz.org/waypoint-demo)
+* **Repository**: [https://github.com/knurdz/Knurdz_WayPoint](https://github.com/knurdz/Knurdz_WayPoint)
 
-The entire application stack (Next.js Web App, Python Optimization Microservice, PostgreSQL, Redis, and Caddy Reverse Proxy) launches with automated schema migrations and seed data using our deployment script:
+### Seeded Demonstration Accounts
+
+All seeded demonstration accounts use the verified password: `REDACTED`
+
+| Role | Seeded Email | Default Password | Primary Responsibilities | Target View |
+|---|---|---|---|---|
+| **Dispatcher** | `dispatcher@waypoint.test` | `REDACTED` | Post cutoff optimization, fleet board, live GPS map | `/dispatcher` |
+| **Warehouse Loader** | `loader@waypoint.test` | `REDACTED` | Loading dock staging, reverse LIFO sequence, damage reporting | `/loader` |
+| **Delivery Driver** | `driver@waypoint.test` | `REDACTED` | Route manifest, real time GPS beacon, offline touch POD | `/driver/route` |
+| **Store Manager** | `store@waypoint.test` | `REDACTED` | Daily order placement, 16:00 cutoff alerts, receipt sign off | `/store` |
+
+*Note: The login screen also features 1 click role selector profile cards to load assigned credentials instantly for rapid evaluation.*
+
+---
+
+## 1. Single Command Docker Deployment (Clean Machine Evaluation)
+
+The entire application stack launches with a single Docker Compose command on any clean machine. An automated initialization service (`db_init`) waits for PostgreSQL, applies schema migrations, and seeds master data from operational CSVs before opening web traffic:
 
 ```bash
-# 1. Generate environment variables from template
+# 1. Clone repository
+git clone https://github.com/knurdz/Knurdz_WayPoint.git
+cd Knurdz_WayPoint
+
+# 2. Copy production environment configuration
 cp .env.example .env
 
-# 2. Run automated production deployment script
-bash scripts/deploy.sh
+# 3. Launch full stack with automated migration and seed
+docker compose up -d
 ```
 
-Once the containers are healthy:
-* Web Portal: http://localhost (via Caddy on port 80) or http://localhost:3000 (direct Web)
-* Python Optimization Engine: http://localhost:8000/docs (FastAPI Swagger UI)
+### Validating Service Health
+Once running, verify that all services report healthy status:
+```bash
+docker compose ps
+```
 
-To stop the services:
+* **Web Portal**: [http://localhost:3000](http://localhost:3000) or [http://localhost](http://localhost)
+* **API Health Check**: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+* **FastAPI Allocation Solver**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Stopping Services
 ```bash
 docker compose down
 ```
 
-### Option B: Local Engineering Setup (Bare Metal)
+---
 
-If you prefer running directly on your host machine without Docker:
+## 2. Five Minute Evaluator Walkthrough
+
+Follow this 6 step end to end workflow to test the complete logistics lifecycle:
+
+### Step 1: Store Order Placement
+1. Navigate to `/login` and select **Store Manager** (`store@waypoint.test`).
+2. On `/store`, review cool room capacity utilization (74%) and upcoming deliveries.
+3. Click **Place Order**, enter ambient goods (Bread loaves, organic rice) and chilled goods (Dairy cases, curd).
+4. Submit the order. Notice that orders submitted before 16:00 SLST receive instant confirmation and are queued in PostgreSQL for the morning run.
+
+### Step 2: Dispatcher Optimization & Allocation
+1. Log in as **Dispatcher** (`dispatcher@waypoint.test`).
+2. Navigate to **Order Queue** (`/dispatcher/orders`). Review the unallocated orders across Colombo, Gampaha, and Kandy.
+3. Click **Run Recommendation** (or navigate to `/dispatcher/allocation`). The system passes candidate orders and available vehicles to the FastAPI mathematical constraint solver.
+4. Review generated trips, vehicle fill rates, and constraint compliance scores.
+
+### Step 3: Warehouse Loading & LIFO Sequencing
+1. Log in as **Warehouse Loader** (`loader@waypoint.test`).
+2. On `/loader`, select an active loading run (e.g. `Trip 1 · VEH037`).
+3. Verify the reverse load sequencing (last delivery stop loaded first into the chassis).
+4. Confirm crate verification checklists and report any dock exceptions.
+
+### Step 4: Driver GPS Telemetry & Proof of Delivery (POD)
+1. Log in as **Delivery Driver** (`driver@waypoint.test`) on `/driver/route` (optimized for 390px mobile viewports).
+2. Observe the **GPS Telemetry Active** indicator in the toolbar: the device streams real browser geolocation fixes (`navigator.geolocation`) to the backend telemetry engine.
+3. Tap **Capture POD** on Stop 1 (`/driver/pod`), capture a digital touch signature and photo POD, and confirm delivery.
+4. Notice that Stop 1 updates to **Delivered**, and delivery completion timestamps are written to PostgreSQL.
+
+### Step 5: Real Time Sri Lankan Fleet Map (PickMe / Uber Precision)
+1. Return to the Dispatcher portal and navigate to **Fleet Map** (`/dispatcher/map`).
+2. Inspect the interactive Leaflet map centered on Sri Lanka's Western and Central transport corridors.
+3. Observe active vehicles with directional heading arrows and speed tags.
+4. Select `VEH037`: review its active GPS fix, completed stops, and live thermal telemetry (+3.4°C chilled).
+5. Toggle between **Sri Lanka Map** and **Corridor Schematic** to compare geographic and topological perspectives.
+
+### Step 6: Store Goods Receipt Closeout
+1. Switch back to **Store Manager** (`store@waypoint.test`) on `/store`.
+2. Inspect the delivered run, review the driver's submitted POD signature, and close out the delivery receipt.
+
+---
+
+## 3. Real Time GPS Telemetry & Predictive Routing Engine
+
+To deliver high fidelity operational visibility similar to PickMe and Uber, Waypoint features a hybrid telemetry engine:
+
+1. **Active Driver Browser GPS**:
+   When drivers access `/driver/route`, the application utilizes `navigator.geolocation.watchPosition` to sample high accuracy latitude, longitude, heading, and speed, streaming updates to `/api/driver/telemetry`. Vehicles reporting active telemetry display a `LIVE SATELLITE GPS` badge with real time radar ripples.
+
+2. **Predictive Route Interpolation (Fallback)**:
+   When a vehicle does not have an active driver session or enters cellular blind spots, the engine predicts position using:
+   * Depot departure schedules (05:00 SLST) and current elapsed time.
+   * Baseline inter stop travel distances and speed metrics from `district_travel.csv`.
+   * Hourly traffic congestion factors from `traffic_speed.csv`.
+   * Known geographic coordinates for 100 Sri Lankan retail outlets across Western and Central Provinces.
+   The engine interpolates the vehicle's position along the road polyline, calculating heading and speed while displaying a `PREDICTIVE MODEL` badge.
+
+---
+
+## 4. Significant Advancements Since Day 5 Design
+
+During the transition from the Day 5 Designathon specification to production deployment, several strategic enhancements were engineered:
+
+* **Pure Database Backed Persistence**:
+  Replaced mock data with PostgreSQL 16 managed via Prisma Client. All orders, line items, vehicle allocations, trips, stops, deferrals, and proof of delivery records are persisted directly to relational tables.
+
+* **Automated Cold Boot Orchestration (`db_init`)**:
+  Introduced a dedicated migration container in `docker-compose.yml` that handles schema creation and CSV master data seeding automatically on `docker compose up`, eliminating manual setup steps on clean evaluator machines.
+
+* **Dual Mode Interactive Fleet Cartography**:
+  Enhanced the dispatcher map with an interactive Leaflet mapping engine featuring CartoDB Voyager tiles, custom directional SVG vehicle markers, route polylines, and dynamic auto panning.
+
+* **Offline First Resilience & Conflict Reconciliation**:
+  Equipped mobile views with Serwist service worker precaching and IndexedDB mutation queues, enabling drivers to complete deliveries and capture signatures in offline basement loading docks. Upon reconnection, an automated reconciliation algorithm resolves discrepancies against central records.
+
+* **Standalone Production Containerization**:
+  Configured Next.js standalone build output, reducing container image size and dependencies while improving boot times and memory efficiency.
+
+---
+
+## 5. Automated Verification & Quality Assurance
+
+Waypoint maintains strict quality gates across both frontend and backend modules:
 
 ```bash
-# 1. Install Node dependencies
-pnpm install
+# 1. Run Python Allocation Solver test suite (24 tests)
+packages/allocation/.venv/bin/pytest packages/allocation/tests/ -v
 
-# 2. Setup database schema and seed demonstration data
-cp .env.example .env
-pnpm --filter @waypoint/database db:push
-pnpm --filter @waypoint/database db:seed
+# 2. Run TypeScript compilation across all packages (0 errors)
+pnpm --filter @waypoint/web run typecheck
 
-# 3. Start Python Allocation Microservice
-cd packages/allocation
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8000 &
-cd ../..
+# 3. Run ESLint code quality suite (0 errors)
+pnpm --filter @waypoint/web run lint
 
-# 4. Start Next.js Web Application
-pnpm --filter @waypoint/web dev
+# 4. Run Vitest automated test suite (58 unit tests)
+pnpm --filter @waypoint/web run test
+
+# 5. Run end to end API smoke test suite
+bash scripts/smoke_test.sh
 ```
 
-Visit http://localhost:3000 to access the portal.
-
 ---
 
-## 2. Seeded Demonstration Accounts
-
-All demonstration accounts share the default password: `REDACTED`
-The login screen also includes 1 click role selector buttons for rapid evaluation.
-
-| Role | Email | Primary Responsibilities | Landing View |
-|---|---|---|---|
-| **Dispatcher** | `dispatcher@waypoint.test` | Post cutoff allocation, exception inbox, fleet board | `/dispatcher` |
-| **Warehouse Loader** | `loader@waypoint.test` | Depot staging, reverse load LIFO scan, damage logs | `/loader` |
-| **Delivery Driver** | `driver@waypoint.test` | Road manifest, offline POD signature, exception filing | `/driver` |
-| **Store Manager** | `store@waypoint.test` | Daily order placement, cutoff urgency, receipt closeout | `/store` |
-
----
-
-## 3. Monorepo Architecture
-
-Waypoint is organized as a Turborepo monorepo with strict package boundaries:
+## 6. Monorepo Structure
 
 ```text
 .
 ├── apps/
-│   └── web/                   Next.js 16 App Router, React 19, Tailwind CSS v4, Serwist PWA
+│   └── web/                   Next.js 16 App Router, React 19, Tailwind CSS v4, Leaflet, Serwist PWA
 ├── packages/
-│   ├── allocation/            Python 3.12 FastAPI microservice with greedy solver and 14 rules
+│   ├── allocation/            Python 3.12 FastAPI microservice with constraint solver (14 hard rules)
 │   ├── database/              PostgreSQL Prisma 6 schema, migration scripts, and CSV seeder
-│   ├── types/                 Shared TypeScript contracts and shared schema definitions
+│   ├── types/                 Shared TypeScript contracts and data models
 │   └── config/                Shared ESLint, Prettier, and TypeScript base configurations
 ├── docker/
-│   ├── Caddyfile              Caddy reverse proxy with security headers and gzip compression
-│   ├── web.Dockerfile         Multi stage production Dockerfile for Next.js web application
+│   ├── Caddyfile              Caddy reverse proxy with automatic TLS and security headers
+│   ├── web.Dockerfile         Multi stage standalone Dockerfile for Next.js web application
 │   └── allocation.Dockerfile  Optimized Python 3.12 Dockerfile for FastAPI microservice
-├── data/                      120 retail outlets, 60 fleet vehicles, and operational calendar CSVs
+├── data/                      100 retail outlets, 37 fleet vehicles, and road travel network CSVs
 ├── uploads/                   Local storage volume for proof of delivery photo binaries
 ├── scripts/
-│   ├── deploy.sh              Zero downtime automated production deployment script
+│   ├── deploy.sh              Automated production deployment script
 │   └── smoke_test.sh          Automated API assertion and end to end validation suite
 ├── docker-compose.yml         Multi container orchestration specification
 ├── pnpm-workspace.yaml        Pnpm workspace definition
 ├── turbo.json                 Turborepo build cache and task pipeline configuration
 └── package.json               Root workspace scripts and dependencies
-```
-
----
-
-## 4. Five Developer Team Ownership Streams
-
-To deliver the enterprise platform rapidly without blockers, responsibilities were divided into 5 decoupled engineering streams:
-
-* **Stream 1 · Lead Architect & DevOps**: Monorepo scaffolding, Docker compose, Prisma 6 schema, Jose edge JWT authentication, AppShell layout, and global AI Logistics Copilot (`Cmd+K`).
-* **Stream 2 · Algorithm & Backend Lead**: Python 3.12 FastAPI engine, implementation of all 14 hard feasibility rules, priority heuristic solver, and deferral diagnosis engine.
-* **Stream 3 · Dispatcher Experience**: Mission Control dashboard (DISP 01), post cutoff order queue (DISP 02), drag and drop vehicle allocation board (DISP 04), and live GPS map (DISP 08).
-* **Stream 4 · Driver Mobile PWA Specialist**: Mobile viewport ergonomics (390px), Serwist service worker precaching, IndexedDB offline mutation outbox, signature canvas, and background sync.
-* **Stream 5 · Dock & Store Full Stack**: Store order placement (SM 03), reactive 16:00 SLST cutoff ticker (SM 05), LIFO reverse loading checklist (LOAD 03), and goods receipt closeout (SM 08).
-
----
-
-## 5. Five Minute Evaluator Smoke Test Walkthrough
-
-Follow this 5 step workflow to evaluate the full logistics lifecycle:
-
-1. **Step 1 · Store Order Placement (`store@waypoint.test`)**:
-   Log in as Store Manager. Navigate to Create Order. Submit a Fresh order containing chilled and frozen items. Observe instant voucher generation and the reactive 16:00 SLST countdown ticker.
-2. **Step 2 · Dispatcher Fleet Allocation (`dispatcher@waypoint.test`)**:
-   Log in as Dispatcher. Open the Post Cutoff Order Queue. Click **Run Recommendation** to trigger the Python optimization solver. Review allocated trips on the Fleet Board, examine deferral reason codes for unallocated orders, and inspect constraint validation scores.
-3. **Step 3 · Dock Staging & LIFO Checklist (`loader@waypoint.test`)**:
-   Log in as Loader. Open your assigned vehicle run. Inspect reverse load sequencing (farthest stop loaded first). Use barcode input to verify crates and file a simulated damage exception. Notice immediate exception alert propagation.
-4. **Step 4 · Driver Road Execution & Offline POD (`driver@waypoint.test`)**:
-   Switch to mobile viewport (390x844). Open route manifest. Arrive at Stop 1 and complete delivery with touch signature and photo POD. Open DevTools Network tab and toggle **Offline**. Complete Stop 2 offline. Notice the offline queue badge. Switch back to **Online** and observe automatic background reconciliation.
-5. **Step 5 · Goods Receipt & Dispute Closeout (`store@waypoint.test`)**:
-   Return to Store Portal. Open Receipt Confirmation. Review driver signature and photo POD. Confirm delivery or file discrepancy report with zero friction.
-
----
-
-## 6. Designathon Continuity and Architectural Enhancements
-
-Waypoint faithfully translates the complete Day 5 Designathon architectural blueprint into a fully functioning production platform, satisfying 100% of the screen flows and operational constraints:
-
-* **Complete Screen Flow Fidelity**: All 33 user interface screens across the 4 operational roles (DISP 01 through DISP 10, LOAD 01 through LOAD 05, DRV 01 through DRV 06, and SM 01 through SM 08) are fully implemented without omissions.
-* **Visual Direction & SBB Palette**: The user interface strictly adheres to the clean Swiss SBB Logistics Light Palette, flat component elevation, and high contrast typography specified in the design brief.
-* **Domain Entity Integrity**: Real competition entities (`OUT001`, `OUT015`, `VEH037`, Colombo, Peliyagoda, Kandy) and operational datasets are directly wired into all views.
-* **Positive Value Add Enhancements**:
-  * **Global Logistics AI Copilot (`/agent` and `Cmd+K`)**: Added an intelligent enterprise assistant powered by natural language retrieval to query fleet capacity, analyze festival demand ramps, and explain constraint trade offs in real time.
-  * **Mobile Ergonomics**: Driver and loader workflows are enhanced with thumb reach optimized bottom sheets, preventing accidental taps in noisy warehouse docks or roadside environments.
-  * **Automated Three Way Conflict Reconciliation**: Field sync edge cases are handled automatically, ensuring that if a dispatcher defers a stop while a driver completes delivery offline, the valid physical delivery evidence takes precedence.
-
----
-
-## 7. Verification and Automated Testing
-
-```bash
-# Run Python Allocation Engine test suite (24 unit and rule tests)
-packages/allocation/.venv/bin/pytest packages/allocation/tests/ -v
-
-# Run Next.js production build and TypeScript verification (62 routes)
-pnpm --filter @waypoint/web run build
-
-# Run end to end API smoke test suite
-bash scripts/smoke_test.sh
 ```
