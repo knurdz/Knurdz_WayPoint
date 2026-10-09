@@ -1,4 +1,4 @@
-{$DOMAIN:http://localhost, :80} {
+{$DOMAIN:http://localhost} {
     # Centralized Security Headers (OWASP Top 10 Hardened)
     header {
         X-Content-Type-Options nosniff
