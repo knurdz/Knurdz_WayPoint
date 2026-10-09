@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loaderShortfallSchema, validateRequestBody } from "@/lib/api_schemas";
+import { addIncident } from "@/lib/incidentsStore";
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +11,20 @@ export async function POST(req: Request) {
     const { tripId, qtyShort, productLine, notes, decision } = validation.data;
 
     const incidentId = `INC_${Math.floor(8800 + Math.random() * 1000)}`;
+
+    addIncident({
+      id: incidentId.toLowerCase(),
+      code: incidentId,
+      type: "shortfall",
+      severity: "high",
+      title: `Dock Shortfall: ${tripId || "VEH037"} short ${qtyShort || 3} units`,
+      description: `${productLine || "Chilled cases"}: ${notes || "Damaged/missing cases at staging"}. Decision: ${decision || "Gate alert dispatched"}.`,
+      vehicleId: tripId ? tripId.split(" ")[0] : "VEH037",
+      routeId: "R025229",
+      outletId: "OUT001",
+      status: "OPEN",
+      timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }) + " SLST",
+    });
 
     return NextResponse.json({
       success: true,

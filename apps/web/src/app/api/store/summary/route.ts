@@ -99,6 +99,50 @@ export async function GET(req: NextRequest) {
         todayOpen,
         awaitingReceipt,
       },
+      orders: orders.map((o) => {
+        const orderDateStr = new Date(o.orderDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
+        const goodsDesc =
+          o.items.map((i) => i.description).join(', ') ||
+          (o.tempRequirement === 'reefer' ? 'Dairy cases, curd, ice cream' : 'Bread loaves, organic rice');
+
+        let displayStatus = 'Confirmed';
+        let actionUrl = `/store/tracking?orderId=${o.orderId}`;
+        let actionLabel = 'Track';
+
+        if (o.status === OrderStatus.delivered) {
+          displayStatus = 'Delivered';
+          actionUrl = `/store/receipt?orderId=${o.orderId}`;
+          actionLabel = 'Receipt';
+        } else if (o.status === OrderStatus.in_transit) {
+          displayStatus = 'In transit';
+          actionUrl = `/store/tracking?orderId=${o.orderId}`;
+          actionLabel = 'Track';
+        } else if (o.status === OrderStatus.allocated) {
+          displayStatus = 'Allocated';
+          actionUrl = `/store/tracking?orderId=${o.orderId}`;
+          actionLabel = 'Track';
+        } else if (o.status === OrderStatus.deferred) {
+          displayStatus = 'Deferred';
+          actionUrl = `/store/deferral?orderId=${o.orderId}`;
+          actionLabel = 'Notice';
+        }
+
+        return {
+          id: o.orderId,
+          date: orderDateStr,
+          temp: o.tempRequirement === 'reefer' ? ('Chilled' as const) : ('Ambient' as const),
+          volume: +(o.volumeM3.toFixed(2)),
+          weightKg: Math.round(o.weightKg),
+          status: displayStatus,
+          actionUrl,
+          actionLabel,
+          goods: goodsDesc,
+        };
+      }),
       deliveries: deliveries.length > 0 ? deliveries : [
         {
           id: 'del_1',

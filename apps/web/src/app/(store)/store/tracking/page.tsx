@@ -29,7 +29,12 @@ const SriLankaFleetMap = dynamic(
   }
 );
 
-export default function StoreTrackingPage() {
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+function StoreTrackingContent() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId") || "DEL 88401";
   const [vehicles, setVehicles] = useState<MapVehicle[]>([]);
 
   useEffect(() => {
@@ -48,18 +53,18 @@ export default function StoreTrackingPage() {
       {/* Header */}
       <div className="screen-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <span className="wp-label">Delivery Tracking · OUT003 Galle Rd</span>
+          <span className="wp-label">Delivery Tracking · OUT001 / Colombo Fresh</span>
           <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
-            Order DEL 88401 Tracking
+            Order {orderId} Tracking
           </h1>
           <p className="wp-subtext">Store Manager: Anjali Jayawardena · Assigned Blue Reefer Van: VEH037</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span className="mc-pill mc-pill-ok" style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
             <CheckCircle2 size={14} />
-            <span>Delivered 06:38 AM · POD Verified</span>
+            <span>Transit / POD Active</span>
           </span>
-          <Link href="/store/receipt" className="wp-btn wp-btn-primary" style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+          <Link href={`/store/receipt?orderId=${encodeURIComponent(orderId)}`} className="wp-btn wp-btn-primary" style={{ fontSize: "0.82rem", padding: "0.45rem 0.85rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
             <span>Confirm Receipt</span>
             <ArrowRight size={14} />
           </Link>
@@ -167,5 +172,13 @@ export default function StoreTrackingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StoreTrackingPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading transit telemetry...</div>}>
+      <StoreTrackingContent />
+    </Suspense>
   );
 }

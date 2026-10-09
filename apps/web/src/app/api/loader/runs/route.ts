@@ -1,16 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma, ensureInitialOrders, StopStatus, OrderStatus } from '@waypoint/database';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await ensureInitialOrders();
+
+    const { searchParams } = new URL(req.url);
+    const tripId = searchParams.get('tripId');
 
     let trips = await prisma.trip.findMany({
       include: {
         stops: {
           include: {
             outlet: true,
-            order: true,
+            order: {
+              include: {
+                items: true,
+              },
+            },
           },
           orderBy: { stopSequence: 'asc' },
         },
@@ -96,13 +103,82 @@ export async function GET() {
           stops: {
             include: {
               outlet: true,
-              order: true,
+              order: {
+                include: {
+                  items: true,
+                },
+              },
             },
             orderBy: { stopSequence: 'asc' },
           },
           vehicle: true,
         },
         orderBy: { tripId: 'asc' },
+      });
+    }
+
+    if (tripId) {
+      const targetTrip = trips.find((t) => t.tripId === tripId) || trips[0];
+      if (!targetTrip) {
+        return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+      }
+
+      // Reverse LIFO: highest sequence loaded first (step 1 = last stop)
+      const reversedStops = [...targetTrip.stops].sort((a, b) => b.stopSequence - a.stopSequence);
+
+      const lifoStops = reversedStops.map((stop, index) => {
+        const order = stop.order;
+        const items = order?.items || [];
+        const isFirstStep = index === 0;
+        const isLastStep = index === reversedStops.length - 1;
+
+        let label = 'Mid compartment';
+        if (isFirstStep) label = 'Load first (Rear bed)';
+        else if (isLastStep) label = 'Load last (Roll-up door)';
+
+        const lines = items.length > 0 ? items.map((item, itemIdx) => ({
+          id: `${stop.id}_${item.id || itemIdx}`,
+          name: item.description,
+          sku: item.sku,
+          qty: `${item.quantity} Cases`,
+          temp: order?.tempRequirement === 'reefer' ? '+4°C Chilled' : 'Ambient',
+          tempBadgeClass: order?.tempRequirement === 'reefer' ? 'wp-badge-success' : '',
+          img: order?.tempRequirement === 'reefer' ? '/assets/products/greek-yogurt.jpg' : '/assets/products/organic-rice.jpg',
+          verified: false,
+        })) : [
+          {
+            id: `${stop.id}_default`,
+            name: order?.tempRequirement === 'reefer' ? 'Pasteurized Chilled Milk' : 'Ambient Bakery Rice Packs',
+            sku: order?.tempRequirement === 'reefer' ? 'SKU-CH-MILK-1L' : 'SKU-AM-RICE-05',
+            qty: `${order?.orderUnits || 20} Cases`,
+            temp: order?.tempRequirement === 'reefer' ? '+4°C Chilled' : 'Ambient',
+            tempBadgeClass: order?.tempRequirement === 'reefer' ? 'wp-badge-success' : '',
+            img: order?.tempRequirement === 'reefer' ? '/assets/products/milk-bottle.jpg' : '/assets/products/organic-rice.jpg',
+            verified: false,
+          },
+        ];
+
+        return {
+          step: index + 1,
+          stopId: stop.id,
+          stopSequence: stop.stopSequence,
+          label,
+          title: `Stop ${stop.stopSequence} · ${stop.outletId} ${stop.outlet?.name || ''}`,
+          window: `${stop.outlet?.windowOpenTime || '05:00'} to ${stop.outlet?.windowCloseTime || '07:30'}`,
+          lines,
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        trip: {
+          tripId: targetTrip.tripId,
+          vehicleId: targetTrip.vehicleId,
+          brand: targetTrip.brand,
+          district: targetTrip.district,
+          stopsCount: targetTrip.stops.length,
+          stops: lifoStops,
+        },
       });
     }
 
@@ -120,7 +196,7 @@ export async function GET() {
         title: `${t.brand} · ${t.district} · ${stopCount} stops`,
         status: statusLabel,
         stopsCount: stopCount,
-        link: '/loader',
+        link: `/loader?tripId=${t.tripId}&vehicleId=${t.vehicleId}`,
       };
     });
 

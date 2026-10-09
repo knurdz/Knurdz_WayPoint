@@ -10,6 +10,19 @@ function ConfirmContent() {
   const ord2 = searchParams.get("ord2") || "ORD009877";
   const isLate = searchParams.get("late") === "1";
 
+  const targetDate = new Date();
+  if (isLate) {
+    targetDate.setDate(targetDate.getDate() + 2);
+  } else {
+    targetDate.setDate(targetDate.getDate() + 1);
+  }
+  const dateFormatted = targetDate.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
   return (
     <section className="wp-panel screen-deferral-notice" style={{ padding: "2.5rem 1.5rem", textAlign: "center" }}>
       {isLate ? (
@@ -25,15 +38,18 @@ function ConfirmContent() {
       </p>
       <p className="wp-subtext" style={{ maxWidth: "500px", margin: "0.5rem auto 0" }}>
         {isLate
-          ? "Orders placed after 16:00 SLST cutoff will ship on the following delivery run."
-          : "Delivery date Wed 01 Oct · OUT001 · queued for dispatcher planning after 16:00 SLST"}
+          ? `Orders placed after 16:00 SLST cutoff scheduled for subsequent run on ${dateFormatted}.`
+          : `Scheduled delivery on ${dateFormatted} · OUT001 · queued for dispatch planning.`}
       </p>
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.5rem", flexWrap: "wrap" }}>
+        <Link href="/store/orders" className="wp-btn wp-btn-primary">
+          View in Order History
+        </Link>
+        <Link href="/dispatcher/queue" className="wp-btn wp-btn-outline">
+          View in Dispatch Queue
+        </Link>
         <Link href="/store" className="wp-btn wp-btn-outline">
           Return to Portal
-        </Link>
-        <Link href="/dispatcher/queue" className="wp-btn wp-btn-primary">
-          View in queue
         </Link>
       </div>
     </section>

@@ -1,76 +1,52 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Route, PackageOpen, BellOff, Plus, Filter, Search, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Route, PackageOpen, BellOff, Plus, Filter, Search, ArrowRight, Loader2 } from 'lucide-react';
 
 interface StoreOrder {
   id: string;
   date: string;
   temp: 'Chilled' | 'Ambient' | 'Frozen';
   volume: number;
-  status: 'In transit' | 'Delivered' | 'Deferred';
+  weightKg?: number;
+  status: 'Confirmed' | 'Allocated' | 'In transit' | 'Delivered' | 'Deferred';
   actionUrl: string;
   actionLabel: string;
+  goods?: string;
 }
 
-const ORDERS: StoreOrder[] = [
-  {
-    id: 'ORD009876',
-    date: '30 Sep 2026',
-    temp: 'Chilled',
-    volume: 1.45,
-    status: 'In transit',
-    actionUrl: '/store/tracking',
-    actionLabel: 'Track',
-  },
-  {
-    id: 'ORD009850',
-    date: '29 Sep 2026',
-    temp: 'Ambient',
-    volume: 3.20,
-    status: 'Delivered',
-    actionUrl: '/store/receipt',
-    actionLabel: 'Receipt',
-  },
-  {
-    id: 'ORD009801',
-    date: '27 Sep 2026',
-    temp: 'Chilled',
-    volume: 2.10,
-    status: 'Deferred',
-    actionUrl: '/store/deferral',
-    actionLabel: 'Notice',
-  },
-  {
-    id: 'ORD009765',
-    date: '25 Sep 2026',
-    temp: 'Ambient',
-    volume: 4.80,
-    status: 'Delivered',
-    actionUrl: '/store/receipt',
-    actionLabel: 'Receipt',
-  },
-  {
-    id: 'ORD009720',
-    date: '23 Sep 2026',
-    temp: 'Frozen',
-    volume: 0.95,
-    status: 'Delivered',
-    actionUrl: '/store/receipt',
-    actionLabel: 'Receipt',
-  },
-];
-
 export default function StoreOrdersPage() {
-  const [filter, setFilter] = useState<'All' | 'In transit' | 'Delivered' | 'Deferred'>('All');
+  const [orders, setOrders] = useState<StoreOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'All' | 'In transit' | 'Delivered' | 'Deferred' | 'Confirmed'>('All');
   const [search, setSearch] = useState('');
 
-  const filteredOrders = ORDERS.filter((order) => {
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/store/summary', { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.orders && Array.isArray(data.orders)) {
+          setOrders(data.orders);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load store orders', err);
+          setLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  const filteredOrders = orders.filter((order) => {
     const matchesFilter = filter === 'All' || order.status === filter;
     const matchesSearch =
       order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.temp.toLowerCase().includes(search.toLowerCase());
+      order.temp.toLowerCase().includes(search.toLowerCase()) ||
+      (order.goods && order.goods.toLowerCase().includes(search.toLowerCase()));
     return matchesFilter && matchesSearch;
   });
 
@@ -108,8 +84,8 @@ export default function StoreOrdersPage() {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['All', 'In transit', 'Delivered', 'Deferred'] as const).map((tab) => (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {(['All', 'Confirmed', 'In transit', 'Delivered', 'Deferred'] as const).map((tab) => (
             <button
               key={tab}
               type="button"

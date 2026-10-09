@@ -1,20 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export default function StoreDeferralPage() {
+function StoreDeferralContent() {
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId") || "ORD_DEFERRED";
   const [acknowledged, setAcknowledged] = useState(false);
+
+  const nextRun = new Date();
+  nextRun.setDate(nextRun.getDate() + 1);
+  const nextRunFormatted = nextRun.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       <section className="wp-panel screen-deferral-notice" style={{ padding: "2.5rem 1.5rem", textAlign: "center" }}>
         <span className="mc-status-chip mc-status-chip-warn">Order deferred</span>
         <h1 className="wp-headline-md" style={{ margin: "1rem 0 0.5rem" }}>
-          ORD009801 not on tomorrow run
+          {orderId} queued for priority rollover
         </h1>
         <p className="wp-subtext">
-          <strong>Reefer Capacity Shortage</strong>: Refrigerated compartment unavailable for your chilled volume.
+          <strong>Reefer Capacity Shortage</strong>: Refrigerated compartment unavailable for peak demand run.
         </p>
 
         <div
@@ -29,11 +40,11 @@ export default function StoreDeferralPage() {
             textAlign: "left",
           }}
         >
-          Second consecutive deferral (last run: <strong>Reefer Capacity Shortage</strong>). Supervisor override applied.
+          Priority debt flag recorded in PostgreSQL. This outlet automatically receives top preference in the next allocation cycle.
         </div>
 
         <p style={{ marginTop: "1.25rem", fontSize: "1rem" }}>
-          Next run: <strong>Saturday 04 Oct</strong> · 05:00 to 07:30 window retained
+          Next run: <strong>{nextRunFormatted}</strong> · 05:00 to 07:30 window retained
         </p>
 
         <div style={{ marginTop: "1.5rem" }}>
@@ -54,6 +65,9 @@ export default function StoreDeferralPage() {
         </div>
 
         <div style={{ marginTop: "1.5rem", display: "flex", gap: "1rem", justifyContent: "center" }}>
+          <Link href="/store/orders" className="mc-link">
+            Return to Order History →
+          </Link>
           <Link href="/store" className="mc-link">
             Return to Store Portal →
           </Link>
@@ -63,5 +77,13 @@ export default function StoreDeferralPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function StoreDeferralPage() {
+  return (
+    <Suspense fallback={<div>Loading deferral notice...</div>}>
+      <StoreDeferralContent />
+    </Suspense>
   );
 }

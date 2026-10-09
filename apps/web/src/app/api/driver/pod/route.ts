@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return validation.response;
     }
 
-    const { deliveryCode, receiverName, signatureData, photoCaptured } = validation.data;
+    const { deliveryCode, stopId, orderId, receiverName, signatureData, photoCaptured } = validation.data;
     const hasSignature = Boolean(signatureData && signatureData.trim());
     const hasPhoto = Boolean(photoCaptured);
 
@@ -19,18 +19,33 @@ export async function POST(req: Request) {
     const numericPart = deliveryCode.replace(/[^0-9]/g, '');
     const candidateOrderId = `ORD_${numericPart}`;
 
-    let stop = await prisma.tripStop.findFirst({
-      where: {
-        OR: [
-          { orderId: candidateOrderId },
-          { id: deliveryCode },
-          { order: { orderId: { contains: numericPart } } },
-        ],
-      },
-      include: {
-        order: true,
-      },
-    });
+    let stop = null;
+    if (stopId) {
+      stop = await prisma.tripStop.findUnique({
+        where: { id: stopId },
+        include: { order: true },
+      });
+    }
+    if (!stop && orderId) {
+      stop = await prisma.tripStop.findFirst({
+        where: { orderId },
+        include: { order: true },
+      });
+    }
+    if (!stop) {
+      stop = await prisma.tripStop.findFirst({
+        where: {
+          OR: [
+            { orderId: candidateOrderId },
+            { id: deliveryCode },
+            { order: { orderId: { contains: numericPart } } },
+          ],
+        },
+        include: {
+          order: true,
+        },
+      });
+    }
 
     if (!stop) {
       // Find first pending or en_route stop

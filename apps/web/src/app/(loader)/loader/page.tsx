@@ -131,18 +131,42 @@ const INITIAL_STOPS: DockStop[] = [
   },
 ];
 
-export default function LoaderDockPage() {
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+
+function LoaderDockContent() {
+  const searchParams = useSearchParams();
+  const tripId = searchParams.get('tripId') || 'TRIP_001';
+  const vehicleId = searchParams.get('vehicleId') || 'VEH037';
+
   const [stops, setStops] = useState<DockStop[]>(INITIAL_STOPS);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannedInput, setScannedInput] = useState('');
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/loader/runs?tripId=${encodeURIComponent(tripId)}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.trip && data.trip.stops && Array.isArray(data.trip.stops) && data.trip.stops.length > 0) {
+          setStops(data.trip.stops);
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to load trip stops', err);
+        }
+      });
+    return () => controller.abort();
+  }, [tripId]);
 
   const totalLines = stops.reduce((acc, s) => acc + s.lines.length, 0);
   const verifiedCount = stops.reduce(
     (acc, s) => acc + s.lines.filter((l) => l.verified).length,
     0
   );
-  const progressPct = Math.round((verifiedCount / totalLines) * 100);
+  const progressPct = totalLines > 0 ? Math.round((verifiedCount / totalLines) * 100) : 0;
 
   const toggleCheck = (lineId: string) => {
     setStops((prev) =>
@@ -190,10 +214,10 @@ export default function LoaderDockPage() {
         <div>
           <div className="store-page-meta">
             <span className="wp-state wp-state-success">Cold Seal Active</span>
-            <span className="font-mono store-outlet-id">VEH004</span>
+            <span className="font-mono store-outlet-id">{vehicleId}</span>
           </div>
-          <h1 className="wp-headline-md store-page-title">Bay 04 Load Sequence</h1>
-          <p className="wp-subtext store-page-subtitle">Peliyagoda · Trip 1 · reverse LIFO · window 05:00 to 07:30</p>
+          <h1 className="wp-headline-md store-page-title">Bay 04 Load Sequence: {vehicleId}</h1>
+          <p className="wp-subtext store-page-subtitle">Peliyagoda · {tripId} · reverse LIFO staging · window 05:00 to 07:30</p>
         </div>
         <div className="dock-page-actions">
           <button
@@ -204,7 +228,7 @@ export default function LoaderDockPage() {
             <ScanBarcode size={15} />
             <span>Scan Barcode</span>
           </button>
-          <Link href="/loader/signoff" className="wp-btn wp-btn-primary">
+          <Link href={`/loader/signoff?tripId=${encodeURIComponent(tripId)}&vehicleId=${encodeURIComponent(vehicleId)}`} className="wp-btn wp-btn-primary">
             <BadgeCheck size={15} />
             <span>Departure signoff</span>
           </Link>
@@ -369,5 +393,13 @@ export default function LoaderDockPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoaderDockPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "3rem", textAlign: "center" }}>Loading warehouse dock staging sequence...</div>}>
+      <LoaderDockContent />
+    </Suspense>
   );
 }
