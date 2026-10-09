@@ -25,7 +25,12 @@ interface OrderQueueTableProps {
 }
 
 export default function OrderQueueTable({ initialOrders }: OrderQueueTableProps) {
-  const [orders] = useState<OrderItem[]>(initialOrders);
+  const [orders, setOrders] = useState<OrderItem[]>(initialOrders);
+
+  React.useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
+
   const [search, setSearch] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');

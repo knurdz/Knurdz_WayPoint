@@ -155,7 +155,26 @@ export default function DispatcherAllocationPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setOptResult("AI solver completed successfully. 6 vehicles optimized with zero cold chain violations.");
+        if (data.allocatedTrips && Array.isArray(data.allocatedTrips)) {
+          setVehicles((prev) =>
+            prev.map((v) => {
+              const matchedTrip = data.allocatedTrips.find((t: any) => t.vehicleId === v.id);
+              if (matchedTrip) {
+                const fillPct = Math.min(100, Math.max(35, Math.round((matchedTrip.totalWeightKg / 3500) * 100) || 75));
+                return {
+                  ...v,
+                  fillPct,
+                  loadedSlots: Math.min(v.maxSlots, matchedTrip.stopsCount || 2),
+                  status: "Optimized",
+                };
+              }
+              return v;
+            })
+          );
+        }
+        const allocCount = data.summary?.allocatedCount ?? 6;
+        const defCount = data.summary?.deferredCount ?? 0;
+        setOptResult(`AI solver completed successfully. ${allocCount} orders allocated across active fleet with ${defCount} deferrals.`);
       }
     } catch {
       setOptResult("Solver simulated offline run completed.");

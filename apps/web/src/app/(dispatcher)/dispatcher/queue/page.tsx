@@ -28,6 +28,12 @@ export default function OrderQueuePage() {
     };
   }, []);
 
+  const totalOrders = orders.length;
+  const reeferOrders = orders.filter((o) => o.tempRequirement === 'chilled' || o.tempRequirement === 'reefer').length;
+  const vanOnlyOrders = orders.filter((o) => o.parkingConstraint === 'van_only').length;
+  const mallWindowOrders = orders.filter((o) => o.dockType === 'mall' || o.window?.includes('05:00')).length;
+  const allocatedOrders = orders.filter((o) => o.status === 'allocated' || o.status === 'in_transit' || o.status === 'delivered').length;
+
   return (
     <div data-wp-day-scope>
       {/* Cutoff Timeline and Late Order Banner */}
@@ -35,7 +41,7 @@ export default function OrderQueuePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
             <span className="wp-state-text wp-state-info">Demand Staged</span>
-            <span className="wp-subtext" style={{ fontSize: '0.8rem' }}>142 orders today</span>
+            <span className="wp-subtext" style={{ fontSize: '0.8rem' }}>{totalOrders} orders in intake registry</span>
           </div>
           <h1 className="wp-headline-md" style={{ margin: 0 }}>Order Intake &amp; Dispatch Queue</h1>
           <div className="wp-day-switcher" style={{ marginTop: '0.75rem' }}>
@@ -59,8 +65,10 @@ export default function OrderQueuePage() {
         </div>
         <div className="wp-cutoff-banner__actions">
           <div className="wp-cutoff-banner__metric">
-            <span className="wp-label" style={{ fontSize: '0.7rem' }}>Allocated vs Pending</span>
-            <div className="font-mono" style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--wp-heading)' }}>138 / 142</div>
+            <span className="wp-label" style={{ fontSize: '0.7rem' }}>Allocated vs Staged</span>
+            <div className="font-mono" style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--wp-heading)' }}>
+              {allocatedOrders} / {totalOrders}
+            </div>
           </div>
           <Link href="/dispatcher/allocation" className="wp-btn wp-btn-primary">
             <LayoutGrid size={15} />
@@ -77,22 +85,22 @@ export default function OrderQueuePage() {
       <div className="wp-kpi-row" style={{ marginBottom: '1.75rem' }}>
         <div className="wp-kpi">
           <span className="wp-label">Total Inflow</span>
-          <p className="wp-kpi-value">142</p>
+          <p className="wp-kpi-value">{totalOrders}</p>
           <span className="wp-subtext" style={{ fontSize: '0.75rem', marginTop: '0.4rem' }}>100% Demand Ingested</span>
         </div>
         <div className="wp-kpi">
           <span className="wp-label">Reefer / Chilled</span>
-          <p className="wp-kpi-value" style={{ color: 'var(--wp-info)' }}>48</p>
+          <p className="wp-kpi-value" style={{ color: 'var(--wp-info)' }}>{reeferOrders}</p>
           <span className="wp-subtext" style={{ fontSize: '0.75rem', marginTop: '0.4rem' }}>Strict Temperature Control</span>
         </div>
         <div className="wp-kpi">
           <span className="wp-label">Van Only Restricted</span>
-          <p className="wp-kpi-value" style={{ color: 'var(--wp-primary)' }}>26</p>
+          <p className="wp-kpi-value" style={{ color: 'var(--wp-primary)' }}>{vanOnlyOrders}</p>
           <span className="wp-subtext" style={{ fontSize: '0.75rem', marginTop: '0.4rem' }}>Narrow Urban Alleyways</span>
         </div>
         <div className="wp-kpi">
           <span className="wp-label">Mall Bay Windows</span>
-          <p className="wp-kpi-value">18</p>
+          <p className="wp-kpi-value">{mallWindowOrders}</p>
           <span className="wp-subtext" style={{ fontSize: '0.75rem', marginTop: '0.4rem' }}>Fixed Time Unloading</span>
         </div>
       </div>
