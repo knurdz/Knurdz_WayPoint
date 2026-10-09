@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       OUT003: {
         deliveryCode: "OUT003",
         serverStatus: "DEFERRED",
-        serverTimestamp: "2026-10-02T06:00:00.000Z",
+        serverTimestamp: new Date(Date.now() - 3600000).toISOString(),
         deferralReason: "DEF 02 Coolroom capacity restriction",
       },
     };

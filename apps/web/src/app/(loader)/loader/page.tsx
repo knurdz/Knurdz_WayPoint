@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   ScanBarcode,
   BadgeCheck,
@@ -130,9 +131,6 @@ const INITIAL_STOPS: DockStop[] = [
     ],
   },
 ];
-
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect } from 'react';
 
 function LoaderDockContent() {
   const searchParams = useSearchParams();
@@ -319,7 +317,7 @@ function LoaderDockContent() {
             <span className="wp-label">Open issue</span>
             <h2 className="wp-headline-sm store-panel-title">3 milk cases missing</h2>
             <p className="wp-subtext dock-side-copy">Stop 2, OUT004 Colombo 07. Chilled bay count is 12 of 15 cases.</p>
-            <Link href="/loader/shortfall" className="wp-btn wp-btn-primary">
+            <Link href={`/loader/shortfall?tripId=${encodeURIComponent(tripId)}&vehicleId=${encodeURIComponent(vehicleId)}`} className="wp-btn wp-btn-primary">
               <AlertTriangle size={15} />
               <span>Report Shortfall</span>
             </Link>

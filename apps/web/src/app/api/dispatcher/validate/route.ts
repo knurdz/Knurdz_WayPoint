@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { prisma, ensureInitialOrders } from '@waypoint/database';
 import { validateRequestSchema, validateRequestBody } from '@/lib/api_schemas';
 
 export async function POST(req: Request) {
@@ -25,44 +26,79 @@ export async function POST(req: Request) {
       // Fallback to local simulation when FastAPI service is offline
     }
 
+    const dbTrips = await prisma.trip.findMany({
+      include: {
+        vehicle: true,
+        stops: {
+          include: {
+            order: true,
+          },
+        },
+      },
+      orderBy: { tripId: 'asc' },
+    });
+
+    const validatedTrips = dbTrips.length > 0
+      ? dbTrips.map((t) => {
+          const weightCapKg = t.vehicle?.weightCapKg || 5500;
+          const volCapM3 = t.vehicle?.volumeCapM3 || 22;
+          const isOverWeight = t.totalWeightKg > weightCapKg;
+          const isOverVol = t.totalVolumeM3 > volCapM3;
+          const isRed = isOverWeight || isOverVol;
+          return {
+            id: t.tripId,
+            tripName: `${t.vehicleId} T${t.tripNumber}`,
+            weight: `${(t.totalWeightKg / 1000).toFixed(1)} / ${(weightCapKg / 1000).toFixed(1)} t`,
+            volume: `${Math.round(t.totalVolumeM3)} / ${Math.round(volCapM3)} m³`,
+            freshMin: `${Math.round(t.stops.length * 45)} / 270`,
+            fuel: `${Math.round(180 + t.stops.length * 35)} L`,
+            status: (isRed ? 'RED' : t.stops.length >= 4 ? 'AMBER' : 'GREEN') as 'RED' | 'AMBER' | 'GREEN',
+            statusLabel: isRed ? 'Red, blocks publish' : t.stops.length >= 4 ? 'Amber' : 'Green',
+            isRed,
+          };
+        })
+      : [
+          {
+            id: 'VEH037_T1',
+            tripName: 'VEH037 T1',
+            weight: '4.2 / 5.5 t',
+            volume: '18 / 22 m³',
+            freshMin: '213 / 270',
+            fuel: '280 L',
+            status: 'GREEN' as const,
+            statusLabel: 'Green',
+            isRed: false,
+          },
+          {
+            id: 'VEH001_T1',
+            tripName: 'VEH001 T1',
+            weight: '5.1 / 5.5 t',
+            volume: '21 / 22 m³',
+            freshMin: '248 / 270',
+            fuel: '310 L',
+            status: 'AMBER' as const,
+            statusLabel: 'Amber',
+            isRed: false,
+          },
+          {
+            id: 'VEH014_T2',
+            tripName: 'VEH014 T2',
+            weight: '5.6 / 5.5 t',
+            volume: '23 / 22 m³',
+            freshMin: '265 / 270',
+            fuel: '420 L',
+            status: 'RED' as const,
+            statusLabel: 'Red, blocks publish',
+            isRed: true,
+          },
+        ];
+
+    const hasBlockers = validatedTrips.some((t) => t.isRed);
+
     const simulatedValidation = {
-      overallStatus: 'RED',
-      blockersCount: 1,
-      trips: [
-        {
-          id: 'VEH037_T1',
-          tripName: 'VEH037 T1',
-          weight: '4.2 / 5.5 t',
-          volume: '18 / 22 m³',
-          freshMin: '213 / 270',
-          fuel: '280 L',
-          status: 'GREEN',
-          statusLabel: 'Green',
-          isRed: false,
-        },
-        {
-          id: 'VEH001_T1',
-          tripName: 'VEH001 T1',
-          weight: '5.1 / 5.5 t',
-          volume: '21 / 22 m³',
-          freshMin: '248 / 270',
-          fuel: '310 L',
-          status: 'AMBER',
-          statusLabel: 'Amber',
-          isRed: false,
-        },
-        {
-          id: 'VEH014_T2',
-          tripName: 'VEH014 T2',
-          weight: '5.6 / 5.5 t',
-          volume: '23 / 22 m³',
-          freshMin: '265 / 270',
-          fuel: '420 L',
-          status: 'RED',
-          statusLabel: 'Red, blocks publish',
-          isRed: true,
-        },
-      ],
+      overallStatus: hasBlockers ? 'RED' : 'GREEN',
+      blockersCount: validatedTrips.filter((t) => t.isRed).length,
+      trips: validatedTrips,
       legalSwaps: [
         {
           id: 'swap_1',

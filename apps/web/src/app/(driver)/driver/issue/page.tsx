@@ -1,13 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle, ArrowRight, ShieldAlert } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle, ArrowRight, ShieldAlert } from "lucide-react";
 
-export default function DriverIssuePage() {
+function DriverIssueContent() {
+  const searchParams = useSearchParams();
+  const paramStopId = searchParams.get("stopId") || "stop-2";
+  const paramDeliveryCode = searchParams.get("deliveryCode") || "OUT003";
+  const paramOutletCode = searchParams.get("outletCode") || paramDeliveryCode || "OUT003";
+  const paramOutletName = searchParams.get("outletName") || "Fresh Store Outlet";
+  const paramRouteId = searchParams.get("routeId") || "R025229";
+
   const [issueType, setIssueType] = useState("Late for mall window");
   const [notes, setNotes] = useState(
-    "Late for mall window, arrived 11:15 for 10:30 to 12:30 slot. Contact outlet receiving desk."
+    `Late for scheduled delivery window at ${paramOutletCode}. Traffic delay in corridor. Contact outlet receiving desk.`
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -22,7 +30,8 @@ export default function DriverIssuePage() {
         body: JSON.stringify({
           issueType,
           notes,
-          deliveryCode: "OUT003",
+          deliveryCode: paramDeliveryCode,
+          stopId: paramStopId,
         }),
       });
       if (res.ok) {
@@ -43,7 +52,7 @@ export default function DriverIssuePage() {
           <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
             Report delivery issue
           </h1>
-          <p className="wp-subtext">Route R025229 · Stop 2 · OUT003 Kandy Central</p>
+          <p className="wp-subtext">Route {paramRouteId} · {paramOutletCode} {paramOutletName}</p>
         </div>
       </div>
 
@@ -68,7 +77,7 @@ export default function DriverIssuePage() {
                 className="wp-subtext"
                 style={{ maxWidth: "340px", margin: "0.5rem auto 1.5rem auto" }}
               >
-                The exception has been logged and dispatched to central control. Store tracking will display receiving delay status.
+                The exception has been logged and dispatched to central control. Dispatcher exceptions desk has been notified.
               </p>
               <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
                 <Link href="/driver/sync" className="wp-btn wp-btn-primary">
@@ -99,15 +108,15 @@ export default function DriverIssuePage() {
                 >
                   <option value="Access blocked">Access blocked</option>
                   <option value="Late for mall window">Late for mall window</option>
-                  <option value="Quantity mismatch">Quantity mismatch</option>
-                  <option value="Customer refused">Customer refused</option>
-                  <option value="Reefer temp excursion">Reefer temp excursion</option>
+                  <option value="Store receiver unavailable">Store receiver unavailable</option>
+                  <option value="Cold chain chamber threshold warning">Cold chain chamber threshold warning</option>
+                  <option value="Vehicle mechanical issue">Vehicle mechanical issue</option>
                 </select>
               </div>
 
               <div className="wp-field" style={{ marginBottom: "1.25rem" }}>
                 <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: 600, fontSize: "0.85rem" }}>
-                  Notes
+                  Operational note
                 </label>
                 <textarea
                   className="wp-textarea"
@@ -119,24 +128,18 @@ export default function DriverIssuePage() {
                     padding: "0.6rem 0.75rem",
                     borderRadius: "6px",
                     border: "1px solid var(--wp-border)",
-                    backgroundColor: "var(--wp-surface)",
-                    fontSize: "0.85rem",
                   }}
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="wp-btn wp-btn-primary"
-                >
-                  {isSubmitting ? "Transmitting..." : "Transmit to dispatcher"}
-                </button>
-                <Link href="/store/tracking" className="wp-btn wp-btn-outline">
-                  Store tracking
-                </Link>
-              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="wp-btn wp-btn-primary"
+                style={{ width: "100%", padding: "0.65rem 1rem", fontSize: "0.9rem" }}
+              >
+                {isSubmitting ? "Transmitting..." : "Send incident report"}
+              </button>
             </form>
           )}
         </section>
@@ -156,13 +159,13 @@ export default function DriverIssuePage() {
                 marginBottom: "0.5rem",
               }}
             >
-              Mall window restriction
+              Delivery SLA Exception
             </span>
             <h2 className="wp-headline-sm" style={{ margin: "0.25rem 0" }}>
-              10:30 to 12:30 slot
+              {paramOutletCode} Incident Desk
             </h2>
             <p className="wp-subtext" style={{ fontSize: "0.82rem", lineHeight: 1.5 }}>
-              Deliveries arriving outside designated mall windows trigger security dock holds. The store tracking portal reflects receiving delayed state immediately once filed.
+              Transmitting an issue routes directly into Dispatcher exceptions triage and logs an immutable audit trail entry.
             </p>
           </div>
 
@@ -180,7 +183,7 @@ export default function DriverIssuePage() {
               <strong style={{ fontSize: "0.82rem" }}>Cold chain sensor alert</strong>
             </div>
             <p className="wp-subtext" style={{ fontSize: "0.78rem", margin: 0 }}>
-              Reefer unit frozen telemetry: negative 18.5 C (compliant). Chilled chamber: positive 3.2 C (compliant). Door open duration: 3 minutes 20 seconds.
+              Reefer unit frozen telemetry: -19.2°C (compliant). Chilled chamber: +3.4°C (compliant). Vehicle telemetry active.
             </p>
           </div>
 
@@ -202,5 +205,13 @@ export default function DriverIssuePage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function DriverIssuePage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center" }}>Loading issue reporter...</div>}>
+      <DriverIssueContent />
+    </Suspense>
   );
 }

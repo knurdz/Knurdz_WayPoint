@@ -28,6 +28,12 @@ export default function DispatcherDeferralPage() {
   const [confirmed, setConfirmed] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const nextRunDay = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toLocaleDateString("en-GB", { weekday: "long" });
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     async function loadDeferrals() {
@@ -210,7 +216,7 @@ export default function DispatcherDeferralPage() {
             </div>
 
             <p className="wp-subtext" style={{ fontSize: "0.8rem", margin: 0 }}>
-              Deferred: {reasonCode} · Next run Saturday
+              Deferred: {reasonCode} · Next run {nextRunDay}
             </p>
 
             {hasConsecutiveDebt && (

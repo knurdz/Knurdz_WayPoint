@@ -46,6 +46,9 @@ export async function POST(req: Request) {
     });
 
     // Format orders for Python solver
+    const now = new Date();
+    const deliveryDateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}`;
+
     const solverOrders = dbOrders.map((o) => ({
       order_id: o.orderId,
       outlet_id: o.outletId,
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
       temperature: o.tempRequirement === 'reefer' ? 'reefer' : 'ambient',
       weight_kg: o.weightKg,
       volume_m3: o.volumeM3,
-      delivery_date: '2026_03_01',
+      delivery_date: deliveryDateStr,
       parking_constraint: o.outlet?.parkingConstraint || 'normal',
       dock_type: o.outlet?.dockType || 'street',
       deferred_days: o.deferredYesterday ? 1 : 0,
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scenario: 'S1',
-          delivery_date: '2026_03_01',
+          delivery_date: deliveryDateStr,
           orders: solverOrders,
           vehicles: solverVehicles,
         }),
