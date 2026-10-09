@@ -1,48 +1,113 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { MapPin, Clock, Phone, AlertCircle, Camera, MessageSquareWarning, Package, CheckCircle2 } from 'lucide-react';
+import { formatAccessType } from '@/lib/formatters';
 
 interface StopItem {
   id: string;
   name: string;
-  quantity: number;
+  quantity: number | string;
   unit: string;
   category: string;
 }
 
-const ITEMS: StopItem[] = [
-  { id: 'SKU01', name: 'Dairy Pasteurized Milk 1L', quantity: 42, unit: 'cases', category: 'Chilled' },
-  { id: 'SKU02', name: 'Traditional Buffalo Curd Clay Pots', quantity: 18, unit: 'trays', category: 'Chilled' },
-  { id: 'SKU03', name: 'Vanilla Bean Ice Cream Tubs', quantity: 6, unit: 'tubs', category: 'Frozen' },
-];
+interface LoadedDriverStop {
+  id: string;
+  orderId?: string;
+  seq: number;
+  deliveryCode: string;
+  outletCode: string;
+  outletName: string;
+  access: string;
+  status: string;
+  meta: string;
+  windowCloses: string;
+  cargo: { name: string; qty: string }[];
+}
 
-export default function DriverStopPage() {
-  const [activeStopIndex, setActiveStopIndex] = useState(1);
+function DriverStopContent() {
+  const searchParams = useSearchParams();
+  const paramStopId = searchParams.get('stopId') || '';
+  const paramDeliveryCode = searchParams.get('deliveryCode') || '';
+
+  const [stop, setStop] = useState<LoadedDriverStop>({
+    id: paramStopId || 'stop-1',
+    orderId: 'ORD_92301',
+    seq: 1,
+    deliveryCode: paramDeliveryCode || 'DEL_88401',
+    outletCode: 'OUT001',
+    outletName: 'Fresh Galle Rd',
+    access: 'van_only',
+    status: 'In Transit',
+    meta: '06:15 SLST · window closes 07:30',
+    windowCloses: '07:30 SLST',
+    cargo: [
+      { name: 'Dairy Pasteurized Milk 1L', qty: '42 cases' },
+      { name: 'Traditional Buffalo Curd', qty: '18 trays' },
+      { name: 'Vanilla Bean Ice Cream', qty: '6 tubs' },
+    ],
+  });
+
+  useEffect(() => {
+    fetch('/api/driver/route')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error && data.stops && data.stops.length > 0) {
+          const match =
+            data.stops.find(
+              (s: any) =>
+                (paramStopId && s.id === paramStopId) ||
+                (paramDeliveryCode && s.deliveryCode === paramDeliveryCode),
+            ) ||
+            data.stops.find((s: any) => s.status !== 'Delivered') ||
+            data.stops[0];
+
+          if (match) {
+            setStop({
+              id: match.id,
+              orderId: match.orderId,
+              seq: match.seq,
+              deliveryCode: match.deliveryCode,
+              outletCode: match.outletCode,
+              outletName: match.outletName,
+              access: match.access,
+              status: match.status,
+              meta: match.meta,
+              windowCloses: match.windowCloses,
+              cargo: match.cargo || [],
+            });
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load driver route stop details', err));
+  }, [paramStopId, paramDeliveryCode]);
+
+  const podUrl = `/driver/pod?stopId=${encodeURIComponent(stop.id)}&deliveryCode=${encodeURIComponent(stop.deliveryCode)}&orderId=${encodeURIComponent(stop.orderId || '')}`;
+  const issueUrl = `/driver/issue?stopId=${encodeURIComponent(stop.id)}&deliveryCode=${encodeURIComponent(stop.deliveryCode)}&outletCode=${encodeURIComponent(stop.outletCode)}&outletName=${encodeURIComponent(stop.outletName)}`;
 
   return (
     <main className="wp-main">
       <div className="screen-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <span className="wp-label" style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
-            DRV 03 · Stop 2 of 4
+            DRV 03 · Stop {stop.seq} · {stop.deliveryCode}
           </span>
           <h1 className="wp-headline-md" style={{ margin: '4px 0 0', fontSize: 24, fontWeight: 700 }}>
-            OUT001 Fresh Galle Rd
+            {stop.outletCode} {stop.outletName}
           </h1>
           <p className="wp-subtext" style={{ margin: '2px 0 0', color: '#64748B', fontSize: 13 }}>
-            Scheduled Arrival: 06:15 SLST · Estimated Window: 05:00 to 07:30
+            {stop.meta}
           </p>
         </div>
         <Link
-          href="/driver/pod"
+          href={podUrl}
           className="wp-btn wp-btn-primary"
           style={{
             padding: '8px 16px',
             fontSize: 13,
-            background: '#377A8B',
-            color: '#FFFFFF',
             borderRadius: 8,
             textDecoration: 'none',
             display: 'inline-flex',
@@ -71,19 +136,19 @@ export default function DriverStopPage() {
 
           <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8, fontSize: 14, color: '#334155' }}>
             <li>
-              <strong>Physical constraint:</strong> Van Only · curb unload · 3.2 m clearance
+              <strong>Physical constraint:</strong> {formatAccessType(stop.access) || stop.access} · 3.2 m clearance
             </li>
             <li>
-              <strong>Delivery window:</strong> 05:00 to 07:30 SLST (strict morning curfew)
+              <strong>Delivery window:</strong> Closes at {stop.windowCloses} (strict morning curfew)
             </li>
             <li>
-              <strong>Site receiver:</strong> Anjali at rear receiving bay desk
+              <strong>Site receiver:</strong> Anjali at receiving bay desk
             </li>
             <li>
               <strong>Phone contact:</strong> 077 123 4567
             </li>
             <li>
-              <strong>Parking instruction:</strong> Do not block the bus lane; use designated morning delivery bay
+              <strong>Parking instruction:</strong> Use designated commercial unloading bay; avoid blocking bus corridor
             </li>
           </ul>
 
@@ -101,7 +166,7 @@ export default function DriverStopPage() {
           >
             <Clock size={18} color="#377A8B" />
             <span style={{ fontSize: 12, color: '#475569' }}>
-              Standard unloading target: 15 minutes. Temperature probe verification required for dairy cases.
+              Standard unloading target: 15 minutes. Temperature probe verification required for chilled cases.
             </span>
           </div>
         </section>
@@ -117,13 +182,13 @@ export default function DriverStopPage() {
           }}
         >
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px' }}>
-            Cargo Quantities & Crates
+            Cargo Quantities & Manifest Items
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {ITEMS.map((item) => (
+            {stop.cargo.map((item, idx) => (
               <div
-                key={item.id}
+                key={`${item.name}-${idx}`}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -137,14 +202,13 @@ export default function DriverStopPage() {
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{item.name}</div>
                   <div style={{ fontSize: 11, color: '#64748B' }}>
-                    {item.id} · {item.category}
+                    Item {idx + 1} · {stop.deliveryCode}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: '#377A8B' }}>
-                    {item.quantity}
+                  <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'monospace', color: '#377A8B' }}>
+                    {item.qty}
                   </span>
-                  <span style={{ fontSize: 12, color: '#64748B', marginLeft: 4 }}>{item.unit}</span>
                 </div>
               </div>
             ))}
@@ -152,13 +216,11 @@ export default function DriverStopPage() {
 
           <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
             <Link
-              href="/driver/pod"
+              href={podUrl}
               className="wp-btn wp-btn-primary"
               style={{
                 flex: 1,
                 padding: '10px 16px',
-                background: '#377A8B',
-                color: '#FFFFFF',
                 borderRadius: 8,
                 textAlign: 'center',
                 textDecoration: 'none',
@@ -174,7 +236,7 @@ export default function DriverStopPage() {
             </Link>
 
             <Link
-              href="/driver/issue"
+              href={issueUrl}
               className="wp-btn wp-btn-outline"
               style={{
                 flex: 1,
@@ -216,7 +278,7 @@ export default function DriverStopPage() {
         }}
       >
         <Link
-          href="/driver/pod"
+          href={podUrl}
           style={{
             flex: 1,
             height: 48,
@@ -224,7 +286,7 @@ export default function DriverStopPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            background: '#377A8B',
+            background: 'var(--wp-primary)',
             color: '#FFFFFF',
             borderRadius: 8,
             fontWeight: 700,
@@ -235,7 +297,7 @@ export default function DriverStopPage() {
           <Camera size={18} /> Capture POD
         </Link>
         <Link
-          href="/driver/issue"
+          href={issueUrl}
           style={{
             flex: 1,
             height: 48,
@@ -256,5 +318,13 @@ export default function DriverStopPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function DriverStopPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading Stop Details...</div>}>
+      <DriverStopContent />
+    </Suspense>
   );
 }

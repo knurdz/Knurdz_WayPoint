@@ -444,7 +444,7 @@ export function executeVoiceTool(query: string): {
         id: 'queue',
         label: 'Order Queue',
         href: '/dispatcher/queue',
-        description: 'Navigate to today 142 orders queue and run assignments.',
+        description: 'Navigate to today orders queue and run assignments.',
         status: 'Opened Order Queue',
       },
     };

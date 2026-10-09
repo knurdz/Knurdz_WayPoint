@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 interface TripRun {
@@ -14,13 +15,23 @@ interface TripRun {
   link: string;
 }
 
-export default function LoaderRunsPage() {
+function LoaderRunsContent() {
+  const searchParams = useSearchParams();
+  const depot = searchParams.get("depot");
+  const date = searchParams.get("date");
+
   const [runs, setRuns] = useState<TripRun[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/loader/runs", { signal: controller.signal })
+    const query = new URLSearchParams();
+    if (depot) query.set("depot", depot);
+    if (date) query.set("date", date);
+
+    const url = `/api/loader/runs${query.toString() ? `?${query.toString()}` : ""}`;
+
+    fetch(url, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         if (data.runs && Array.isArray(data.runs)) {
@@ -35,7 +46,7 @@ export default function LoaderRunsPage() {
         }
       });
     return () => controller.abort();
-  }, []);
+  }, [depot, date]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -45,7 +56,9 @@ export default function LoaderRunsPage() {
           <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
             Choose vehicle trip to load
           </h1>
-          <p className="wp-subtext">Active vehicle loading manifests from dispatch allocation</p>
+          <p className="wp-subtext">
+            {depot ? `Warehouse: ${depot} · ` : ""}Active vehicle loading manifests from dispatch allocation
+          </p>
         </div>
         <span className="mc-pill mc-pill-warn">Plan updated · live PostgreSQL sync</span>
       </div>
@@ -57,7 +70,7 @@ export default function LoaderRunsPage() {
         </div>
       ) : runs.length === 0 ? (
         <div className="wp-panel" style={{ padding: "2rem", textAlign: "center" }}>
-          <p className="wp-subtext">No planned trips found. Dispatcher allocation required.</p>
+          <p className="wp-subtext">No planned trips found{depot ? ` for ${depot}` : ""}. Dispatcher allocation required.</p>
           <Link href="/dispatcher/allocation" className="wp-btn wp-btn-primary" style={{ marginTop: "1rem", display: "inline-block" }}>
             Run Dispatch Allocation
           </Link>
@@ -89,5 +102,20 @@ export default function LoaderRunsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoaderRunsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: "3rem", textAlign: "center", color: "var(--wp-muted)" }}>
+          <Loader2 className="animate-spin" size={24} style={{ margin: "0 auto 10px" }} />
+          <p>Loading runs...</p>
+        </div>
+      }
+    >
+      <LoaderRunsContent />
+    </Suspense>
   );
 }

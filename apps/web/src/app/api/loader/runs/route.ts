@@ -7,6 +7,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const tripId = searchParams.get('tripId');
+    const depot = searchParams.get('depot');
 
     let trips = await prisma.trip.findMany({
       include: {
@@ -182,7 +183,15 @@ export async function GET(req: Request) {
       });
     }
 
-    const runs = trips.map((t) => {
+    let displayTrips = trips;
+    if (depot && depot.toLowerCase() !== 'all') {
+      const matched = trips.filter((t) => t.depotId && t.depotId.toLowerCase().includes(depot.toLowerCase()));
+      if (matched.length > 0) {
+        displayTrips = matched;
+      }
+    }
+
+    const runs = displayTrips.map((t) => {
       const stopCount = t.stops.length;
       let statusLabel = 'Loading';
       if (t.status === 'completed') statusLabel = 'Completed';

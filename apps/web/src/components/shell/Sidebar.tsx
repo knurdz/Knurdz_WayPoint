@@ -47,7 +47,7 @@ const DISPATCHER_ITEMS: SidebarItem[] = [
   { href: '/dispatcher', label: 'Mission Control', icon: LayoutDashboard, section: 'Overview' },
   { href: '/dispatcher/queue', label: 'Order Queue', icon: ListOrdered, section: 'Dispatch & Planning' },
   { href: '/dispatcher/allocation', label: 'Fleet Allocation', icon: LayoutGrid, section: 'Dispatch & Planning' },
-  { href: '/dispatcher/exceptions', label: 'Exceptions', icon: AlertCircle, badge: '3', section: 'Dispatch & Planning' },
+  { href: '/dispatcher/exceptions', label: 'Exceptions', icon: AlertCircle, section: 'Dispatch & Planning' },
   { href: '/dispatcher/cutoff', label: 'Cutoff & Late Orders', icon: Clock, section: 'Orders & Service' },
   { href: '/dispatcher/deferral', label: 'Deferral Panel', icon: CalendarX, section: 'Orders & Service' },
   { href: '/dispatcher/validator', label: 'Constraint Validator', icon: ShieldCheck, section: 'Analytics' },

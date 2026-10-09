@@ -1,16 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
-export default function LoaderShortfallPage() {
-  const [trip, setTrip] = useState("VEH037 Trip 1 · Stop 2 OUT004");
+interface StopInfo {
+  stopId: string;
+  title: string;
+  lines: Array<{
+    id: string;
+    name: string;
+    sku: string;
+    qty: string;
+  }>;
+}
+
+function LoaderShortfallContent() {
+  const searchParams = useSearchParams();
+  const tripIdParam = searchParams.get("tripId") || "TRIP_001";
+  const vehicleIdParam = searchParams.get("vehicleId") || "VEH037";
+
+  const [trip, setTrip] = useState(`${vehicleIdParam} ${tripIdParam}`);
   const [qtyShort, setQtyShort] = useState("3");
   const [productLine, setProductLine] = useState("Chilled Greek Yogurt 500g");
-  const [notes, setNotes] = useState("3 chilled cases missing from pick face, flagged at 4:42 AM");
+  const [notes, setNotes] = useState("Cases missing from pick face, flagged at loading bay");
   const [selectedDecision, setSelectedDecision] = useState<string>("Leave now · 3 cases short");
   const [submitting, setSubmitting] = useState(false);
   const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+  const [stops, setStops] = useState<StopInfo[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/loader/runs?tripId=${encodeURIComponent(tripIdParam)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.trip && Array.isArray(data.trip.stops) && data.trip.stops.length > 0) {
+          setStops(data.trip.stops);
+          const defaultStop = data.trip.stops[0];
+          setTrip(`${vehicleIdParam} ${tripIdParam} · ${defaultStop.title}`);
+          if (defaultStop.lines && defaultStop.lines.length > 0) {
+            setProductLine(defaultStop.lines[0].name);
+          }
+        }
+      })
+      .catch((err) => console.error("Failed to load trip stops", err));
+  }, [tripIdParam, vehicleIdParam]);
+
+  const handleStopChange = (stopTitle: string) => {
+    setTrip(`${vehicleIdParam} ${tripIdParam} · ${stopTitle}`);
+    const foundStop = stops.find((s) => s.title === stopTitle);
+    if (foundStop && foundStop.lines.length > 0) {
+      setProductLine(foundStop.lines[0].name);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +74,7 @@ export default function LoaderShortfallPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setSubmittedMessage(`Shortfall incident ${data.incidentId} transmitted to Dispatcher Incident Desk.`);
+        setSubmittedMessage(`Shortfall incident ${data.incidentId || "INC-DOCK"} transmitted to Dispatcher Incident Desk.`);
       }
     } catch {
       setSubmittedMessage("Failed to transmit shortfall alert");
@@ -49,7 +91,7 @@ export default function LoaderShortfallPage() {
           <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
             Report before departure
           </h1>
-          <p className="wp-subtext">Stop 2 (OUT004): flag missing stock before truck leaves.</p>
+          <p className="wp-subtext">{trip}: flag missing stock before truck leaves.</p>
         </div>
         <Link href="/dispatcher/exceptions" className="wp-btn wp-btn-primary" style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}>
           Dispatcher inbox
@@ -74,8 +116,22 @@ export default function LoaderShortfallPage() {
         <section className="wp-panel screen-panel" style={{ padding: "1.25rem" }}>
           <form className="store-order-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div className="wp-field">
-              <label style={{ display: "block", marginBottom: "0.35rem", fontSize: "0.8rem", fontWeight: 600 }}>Trip</label>
-              <input className="wp-input font-mono" value={trip} onChange={(e) => setTrip(e.target.value)} readOnly style={{ width: "100%", padding: "0.5rem" }} />
+              <label style={{ display: "block", marginBottom: "0.35rem", fontSize: "0.8rem", fontWeight: 600 }}>Trip & Stop</label>
+              {stops.length > 0 ? (
+                <select
+                  className="wp-input"
+                  style={{ width: "100%", padding: "0.5rem" }}
+                  onChange={(e) => handleStopChange(e.target.value)}
+                >
+                  {stops.map((s) => (
+                    <option key={s.stopId} value={s.title}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input className="wp-input font-mono" value={trip} onChange={(e) => setTrip(e.target.value)} style={{ width: "100%", padding: "0.5rem" }} />
+              )}
             </div>
 
             <div className="wp-field">
@@ -97,7 +153,7 @@ export default function LoaderShortfallPage() {
               <button type="submit" className="wp-btn wp-btn-primary" disabled={submitting}>
                 {submitting ? "Transmitting..." : "Submit to dispatcher"}
               </button>
-              <Link href="/loader" className="wp-btn wp-btn-outline">
+              <Link href={`/loader?tripId=${encodeURIComponent(tripIdParam)}&vehicleId=${encodeURIComponent(vehicleIdParam)}`} className="wp-btn wp-btn-outline">
                 Back to checklist
               </Link>
             </div>
@@ -115,13 +171,13 @@ export default function LoaderShortfallPage() {
                   background: selectedDecision.includes("Hold") ? "var(--wp-active-bg, rgba(14, 165, 233, 0.08))" : "transparent",
                   cursor: "pointer",
                 }}
-                onClick={() => setSelectedDecision("Hold Bay 04 · 12 min")}
+                onClick={() => setSelectedDecision("Hold Bay · 12 min")}
               >
                 <span className="decision-choice-title" style={{ display: "block", fontWeight: 700 }}>
-                  Hold Bay 04 · 12 min
+                  Hold Bay · 12 min
                 </span>
                 <span className="decision-choice-meta" style={{ display: "block", fontSize: "0.78rem", color: "var(--wp-muted)", marginTop: "0.25rem" }}>
-                  Retrieve 3 chilled cases from pick face · keeps OUT004 whole · pushes OUT015 past 09:00 mall window
+                  Retrieve {qtyShort} cases from pick face · keeps manifest whole · minor departure delay
                 </span>
               </button>
 
@@ -136,13 +192,13 @@ export default function LoaderShortfallPage() {
                   background: selectedDecision.includes("Leave") ? "var(--wp-active-bg, rgba(14, 165, 233, 0.08))" : "transparent",
                   cursor: "pointer",
                 }}
-                onClick={() => setSelectedDecision("Leave now · 3 cases short")}
+                onClick={() => setSelectedDecision(`Leave now · ${qtyShort} cases short`)}
               >
                 <span className="decision-choice-title" style={{ display: "block", fontWeight: 700 }}>
-                  Leave now · 3 cases short
+                  Leave now · {qtyShort} cases short
                 </span>
                 <span className="decision-choice-meta" style={{ display: "block", fontSize: "0.78rem", color: "var(--wp-muted)", marginTop: "0.25rem" }}>
-                  Mall window for OUT015 holds · store receipt shows short delivery · gate pass at 4:50 AM
+                  Maintain scheduled departure window · store receipt flags short delivery for reconciliation
                 </span>
               </button>
             </div>
@@ -155,7 +211,7 @@ export default function LoaderShortfallPage() {
             This alert reaches the dispatcher
           </h2>
           <p className="wp-subtext">
-            Stop 2 (OUT004): 3 chilled cases missing, flagged at 4:42 AM. Plan can still change before 4:50 AM departure.
+            {trip}: {qtyShort} cases missing. Plan can still be adjusted before vehicle departure.
           </p>
           <div style={{ marginTop: "1.5rem" }}>
             <Link href="/dispatcher/exceptions" className="wp-btn wp-btn-outline">
@@ -165,5 +221,20 @@ export default function LoaderShortfallPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function LoaderShortfallPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ padding: "3rem", textAlign: "center", color: "var(--wp-muted)" }}>
+          <Loader2 className="animate-spin" size={24} style={{ margin: "0 auto 10px" }} />
+          <p>Loading shortfall reporter...</p>
+        </div>
+      }
+    >
+      <LoaderShortfallContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@waypoint/database";
 import { driverIssueSchema, validateRequestBody } from "@/lib/api_schemas";
+import { addIncident } from "@/lib/incidentsStore";
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +10,21 @@ export async function POST(req: Request) {
       return validation.response;
     }
     const { issueType, notes, deliveryCode, stopId } = validation.data;
+
+    const issueCode = `INC_${Date.now().toString().slice(-4)}`;
+    addIncident({
+      id: `inc_driver_${Date.now()}`,
+      code: issueCode,
+      type: issueType.toLowerCase().includes('window') ? 'window' : 'sync',
+      severity: issueType.toLowerCase().includes('blocked') ? 'high' : 'medium',
+      title: `${issueType} at ${deliveryCode || 'En Route'}`,
+      description: notes || `Driver reported ${issueType} at stop ${stopId || 'active'}`,
+      vehicleId: 'VEH037',
+      routeId: 'R025229',
+      outletId: deliveryCode || 'OUT003',
+      status: 'OPEN',
+      timestamp: `${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} SLST`,
+    });
 
     const auditEntry = await prisma.auditLog.create({
       data: {
@@ -26,7 +42,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      issueId: `ISSUE_${Date.now()}`,
+      issueId: issueCode,
       auditId: auditEntry ? auditEntry.id : null,
       message: "Delivery issue transmitted to dispatcher exception triage",
     });

@@ -13,13 +13,23 @@ interface RolledOrder {
 let cutoffLocked = false;
 let lockedAtTimestamp: string | null = null;
 
+function getNextRunDateStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
+}
+
 const sampleRolledOrders: RolledOrder[] = [
   {
     id: "ord_roll_1",
     orderNumber: "ORD009901",
     outletName: "OUT014 Fresh Kandy",
     receivedTime: "16:12 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 280,
     isColdChain: true,
   },
@@ -28,7 +38,7 @@ const sampleRolledOrders: RolledOrder[] = [
     orderNumber: "ORD009902",
     outletName: "OUT022 Style Colombo",
     receivedTime: "16:28 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 450,
     isColdChain: false,
   },
@@ -37,7 +47,7 @@ const sampleRolledOrders: RolledOrder[] = [
     orderNumber: "ORD009903",
     outletName: "OUT001 Fresh Galle Rd",
     receivedTime: "16:45 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 310,
     isColdChain: true,
   },
@@ -46,7 +56,7 @@ const sampleRolledOrders: RolledOrder[] = [
     orderNumber: "ORD009904",
     outletName: "OUT008 Metro Negombo",
     receivedTime: "16:52 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 620,
     isColdChain: false,
   },
@@ -55,7 +65,7 @@ const sampleRolledOrders: RolledOrder[] = [
     orderNumber: "ORD009905",
     outletName: "OUT019 Express Kurunegala",
     receivedTime: "17:05 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 190,
     isColdChain: true,
   },
@@ -64,7 +74,7 @@ const sampleRolledOrders: RolledOrder[] = [
     orderNumber: "ORD009906",
     outletName: "OUT005 Central Gampaha",
     receivedTime: "17:15 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 520,
     isColdChain: false,
   },
@@ -73,20 +83,26 @@ const sampleRolledOrders: RolledOrder[] = [
     orderNumber: "ORD009907",
     outletName: "OUT011 Coastal Matara",
     receivedTime: "17:30 SLST",
-    nextRunDate: "Wed 01 Oct",
+    nextRunDate: getNextRunDateStr(),
     weightKg: 340,
     isColdChain: true,
   },
 ];
 
 export async function GET() {
+  const dynamicNextRun = getNextRunDateStr();
+  const orders = sampleRolledOrders.map((o) => ({
+    ...o,
+    nextRunDate: dynamicNextRun,
+  }));
+
   return NextResponse.json({
     cutoffTime: "16:00:00",
     timezone: "SLST (UTC+05:30)",
     isLocked: cutoffLocked,
     lockedAt: lockedAtTimestamp,
-    totalLateToday: sampleRolledOrders.length,
-    orders: sampleRolledOrders,
+    totalLateToday: orders.length,
+    orders,
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCutoffCountdown } from "@/hooks/useCutoffCountdown";
 
@@ -123,6 +123,18 @@ export default function DispatcherAllocationPage() {
   const [isSpecsOpen, setIsSpecsOpen] = useState<boolean>(false);
   const [optimizing, setOptimizing] = useState<boolean>(false);
   const [optResult, setOptResult] = useState<string | null>(null);
+  const [dbOrders, setDbOrders] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/dispatcher/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.orders && Array.isArray(data.orders)) {
+          setDbOrders(data.orders);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const currentVeh = vehicles.find((v) => v.id === selectedVehId) || vehicles[3];
 
@@ -183,6 +195,10 @@ export default function DispatcherAllocationPage() {
     }
   };
 
+  const totalOrdersCount = dbOrders.length > 0 ? dbOrders.length : 14;
+  const chilledOrdersCount = dbOrders.filter((o: any) => o.tempRequirement === 'reefer' || o.tempRequirement === 'chilled').length || 6;
+  const deferredOrdersCount = dbOrders.filter((o: any) => o.status === 'deferred').length || 2;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* Top Action Header */}
@@ -208,7 +224,7 @@ export default function DispatcherAllocationPage() {
               className={`wp-day-btn ${activeDay === "tomorrow" ? "active" : ""}`}
               onClick={() => setActiveDay("tomorrow")}
             >
-              Tomorrow planning <span className="wp-day-badge">142 orders</span>
+              Tomorrow planning <span className="wp-day-badge">{totalOrdersCount} orders</span>
             </button>
           </div>
         </div>
@@ -608,7 +624,7 @@ export default function DispatcherAllocationPage() {
         <div className="wp-panel" style={{ padding: "1.5rem" }}>
           <span className="wp-label">Evening planning · Post cutoff 16:00 SLST</span>
           <h2 className="wp-headline-sm" style={{ margin: "0.5rem 0" }}>
-            Tomorrow: 142 orders · 48 chilled · 9 reefer trips available
+            Tomorrow: {totalOrdersCount} orders · {chilledOrdersCount} chilled · 9 reefer trips available
           </h2>
           <p className="wp-subtext">
             Load tomorrow queue when evening planning starts. Today live allocation stays on the Today tab.
@@ -616,12 +632,12 @@ export default function DispatcherAllocationPage() {
           <div className="wp-kpi-row" style={{ marginTop: "1.25rem" }}>
             <div className="wp-kpi">
               <span className="wp-label">Total orders</span>
-              <p className="wp-kpi-value">142</p>
+              <p className="wp-kpi-value">{totalOrdersCount}</p>
             </div>
             <div className="wp-kpi">
               <span className="wp-label">Chilled</span>
               <p className="wp-kpi-value" style={{ color: "var(--wp-info)" }}>
-                48
+                {chilledOrdersCount}
               </p>
             </div>
             <div className="wp-kpi">
@@ -631,7 +647,7 @@ export default function DispatcherAllocationPage() {
             <div className="wp-kpi">
               <span className="wp-label">Est deferrals</span>
               <p className="wp-kpi-value" style={{ color: "var(--wp-warning)" }}>
-                4
+                {deferredOrdersCount}
               </p>
             </div>
           </div>

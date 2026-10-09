@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { prisma, OrderStatus, VehicleStatus } from '@waypoint/database';
+import { GLOBAL_INCIDENTS } from '@/lib/incidentsStore';
 import { COPILOT_KNOWLEDGE_BASE } from '@/lib/copilot_kb';
 import { checkRateLimit } from '@/lib/rate_limiter';
 import { executeVoiceTool } from '@/lib/agent_tools';
@@ -22,12 +24,12 @@ interface StaticAnswer {
 const STATIC_ANSWERS: StaticAnswer[] = [
   {
     match: /orders?\s*(today|count|how many)|how many orders/i,
-    reply: 'There are 142 orders today: 138 confirmed and 4 pending deferrals across Western and Central routes.',
+    reply: 'Orders are actively tracked in the live database across Western and Central routes.',
     action: {
       id: 'queue',
       label: 'Order Queue',
       href: '/dispatcher/queue',
-      description: 'Navigate to the dispatcher order queue for today 142 orders.',
+      description: 'Navigate to the dispatcher order queue for all active orders.',
       status: 'Opened Order Queue',
     },
   },
@@ -82,7 +84,7 @@ const STATIC_ANSWERS: StaticAnswer[] = [
       id: 'queue',
       label: 'Order Queue',
       href: '/dispatcher/queue',
-      description: 'Navigate to the dispatcher order queue for today 142 orders.',
+      description: 'Navigate to the dispatcher order queue for all active orders.',
       status: 'Opened Order Queue',
     },
   },
@@ -165,6 +167,60 @@ export async function POST(req: Request) {
 
     // Query dynamic operational RAG engine for citations and grounded context
     const ragResult = queryRAG(query, 3);
+
+    // Dynamic Live Database Queries for Orders, Fleet, and Exceptions
+    if (/orders?\s*(today|count|how many)|how many orders|deliveries today|order summary/i.test(query)) {
+      const [totalOrders, confirmed, deferred] = await Promise.all([
+        prisma.order.count(),
+        prisma.order.count({ where: { status: OrderStatus.confirmed } }),
+        prisma.order.count({ where: { status: OrderStatus.deferred } }),
+      ]);
+      return NextResponse.json({
+        reply: `There are currently ${totalOrders} orders in the database today: ${confirmed} confirmed and ${deferred} pending deferrals across Western and Central routes.`,
+        action: {
+          id: 'queue',
+          label: 'Order Queue',
+          href: '/dispatcher/queue',
+          description: 'Navigate to the dispatcher order queue for all active orders.',
+          status: 'Opened Order Queue',
+        },
+        citations: ragResult.citations,
+        ragContext: ragResult.groundedContext,
+      });
+    }
+
+    if (/fleet|vehicles?|active fleet|how many (trucks|vans)/i.test(query)) {
+      const activeCount = await prisma.vehicle.count({ where: { status: VehicleStatus.available } });
+      const totalCount = await prisma.vehicle.count();
+      return NextResponse.json({
+        reply: `${activeCount} vehicles are active today out of ${totalCount} fleet units across Peliyagoda Hub and Kandy Terminal.`,
+        action: {
+          id: 'allocation',
+          label: 'Fleet Allocation',
+          href: '/dispatcher/allocation',
+          description: 'Navigate to the fleet allocation board to review vehicle assignments.',
+          status: 'Opened Fleet Allocation',
+        },
+        citations: ragResult.citations,
+        ragContext: ragResult.groundedContext,
+      });
+    }
+
+    if (/exception|incident|triage count|open incident/i.test(query)) {
+      const openExceptions = GLOBAL_INCIDENTS.filter((i) => i.status === 'OPEN').length;
+      return NextResponse.json({
+        reply: `There are ${openExceptions} open exceptions currently requiring triage across dock, sync, and cold chain.`,
+        action: {
+          id: 'exceptions',
+          label: 'Exceptions',
+          href: '/dispatcher/exceptions',
+          description: 'Navigate to Exception & Synchronization Triage and highlight the incident table.',
+          status: 'Opened Exceptions',
+        },
+        citations: ragResult.citations,
+        ragContext: ragResult.groundedContext,
+      });
+    }
 
     // Check real time voice telemetry tools first
     const voiceToolResult = executeVoiceTool(query);
