@@ -4,8 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 
 export default function LoaderDepotPage() {
+  const todayStr = new Date().toISOString().split("T")[0];
   const [selectedDepot, setSelectedDepot] = useState<"Peliyagoda" | "Kandy">("Peliyagoda");
-  const [date, setDate] = useState("2026-09-30");
+  const [date, setDate] = useState(todayStr);
+
+  const displayDate = new Date(date).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+  });
 
   return (
     <div className="wp-stack">
@@ -64,9 +70,9 @@ export default function LoaderDepotPage() {
         </section>
 
         <aside className="wp-panel screen-panel wp-pad-lg">
-          <span className="wp-label">Tomorrow published plan</span>
+          <span className="wp-label">Published dispatch plan</span>
           <h2 className="wp-headline-sm wp-mt-xs wp-mb-md">
-            30 Sep · Fresh window
+            {displayDate} · Fresh window
           </h2>
           <div className="screen-list wp-stack-sm">
             <div className="wp-list-row">

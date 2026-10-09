@@ -22,6 +22,7 @@ interface StopData {
   id: string;
   seq: number;
   deliveryId: string;
+  orderId?: string;
   outletId: string;
   outletName: string;
   accessChip: string;
@@ -42,11 +43,12 @@ interface StopData {
   criticalNote?: string;
 }
 
-const STOPS: StopData[] = [
+const DEFAULT_STOPS: StopData[] = [
   {
     id: 'stop-1',
     seq: 1,
     deliveryId: 'DEL-88401',
+    orderId: 'ORD_92301',
     outletId: 'OUT001',
     outletName: 'Fresh Galle Rd',
     accessChip: 'Van Only',
@@ -63,6 +65,7 @@ const STOPS: StopData[] = [
     id: 'stop-2',
     seq: 2,
     deliveryId: 'DEL-88402',
+    orderId: 'ORD_92302',
     outletId: 'OUT002',
     outletName: 'Duplication Rd',
     accessChip: 'Van Only',
@@ -91,6 +94,7 @@ const STOPS: StopData[] = [
     id: 'stop-3',
     seq: 3,
     deliveryId: 'DEL-88403',
+    orderId: 'ORD_92303',
     outletId: 'OUT003',
     outletName: 'Marine Drive',
     accessChip: 'Street Access',
@@ -118,6 +122,7 @@ const STOPS: StopData[] = [
     id: 'stop-4',
     seq: 4,
     deliveryId: 'DEL-88404',
+    orderId: 'ORD_92304',
     outletId: 'OUT010',
     outletName: 'Colombo 03 · Produce',
     accessChip: 'Van Only',
@@ -143,11 +148,71 @@ const STOPS: StopData[] = [
 ];
 
 export default function DriverRoutePage() {
+  const [stops, setStops] = useState<StopData[]>(DEFAULT_STOPS);
+  const [routeInfo, setRouteInfo] = useState({
+    routeId: 'R025229',
+    vehicleId: 'VEH037',
+    corridor: 'Coastal corridor · Nissan Cabstar · 1 of 4 stops delivered',
+  });
   const [filter, setFilter] = useState<'all' | 'active' | 'done' | 'later'>('all');
   const [search, setSearch] = useState('');
   const [openStopId, setOpenStopId] = useState<string>('stop-2');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [gpsActive, setGpsActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    fetch('/api/driver/route')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error && data.stops && data.stops.length > 0) {
+          const mapped: StopData[] = data.stops.map((s: any) => {
+            const isDone = s.status === 'Delivered';
+            const isActive = s.status === 'In Transit';
+            return {
+              id: s.id,
+              seq: s.seq,
+              deliveryId: s.deliveryCode,
+              orderId: s.orderId,
+              outletId: s.outletCode,
+              outletName: s.outletName,
+              accessChip: s.access === 'van_only' ? 'Van Only' : 'Street Access',
+              accessType: (s.access === 'street' || s.access === 'rear_dock') ? s.access : 'van_only',
+              status: isDone ? 'done' : isActive ? 'active' : 'later',
+              statusLabel: s.status,
+              statusBadgeClass: isDone ? 'wp-badge-success' : isActive ? 'wp-badge-info' : '',
+              meta: s.meta,
+              receiver: s.receiverName || 'Store Receiver',
+              handoverTime: s.handoverTime,
+              windowSlack: s.windowSlack,
+              windowCloses: s.windowCloses,
+              cargo: (s.cargo || []).map((c: any) => ({
+                name: c.name,
+                sub: c.qty,
+                img: c.name.toLowerCase().includes('rice')
+                  ? '/assets/products/organic-rice.jpg'
+                  : c.name.toLowerCase().includes('dairy') || c.name.toLowerCase().includes('milk')
+                  ? '/assets/products/milk-bottle.jpg'
+                  : c.name.toLowerCase().includes('yogurt')
+                  ? '/assets/products/greek-yogurt.jpg'
+                  : '/assets/products/bakery-bread.jpg',
+              })),
+            };
+          });
+          setStops(mapped);
+          const activeStop = mapped.find((s) => s.status === 'active') || mapped.find((s) => s.status === 'later') || mapped[0];
+          if (activeStop) {
+            setOpenStopId(activeStop.id);
+          }
+          const completedCount = mapped.filter((s) => s.status === 'done').length;
+          setRouteInfo({
+            routeId: data.routeId || 'R025229',
+            vehicleId: data.vehicleId || 'VEH037',
+            corridor: data.corridor || `Coastal corridor · Nissan Cabstar · ${completedCount} of ${mapped.length} stops delivered`,
+          });
+        }
+      })
+      .catch((err) => console.error('Failed to load driver route', err));
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -208,7 +273,7 @@ export default function DriverRoutePage() {
     };
   }, []);
 
-  const filteredStops = STOPS.filter((stop) => {
+  const filteredStops = stops.filter((stop) => {
     if (filter === 'active' && stop.status !== 'active') return false;
     if (filter === 'done' && stop.status !== 'done') return false;
     if (filter === 'later' && stop.status !== 'later') return false;
@@ -223,16 +288,19 @@ export default function DriverRoutePage() {
     return true;
   });
 
+  const currentActiveStop = stops.find((s) => s.status === 'active') || stops.find((s) => s.status === 'later') || stops[0];
+  const selectedStop = stops.find((s) => s.id === openStopId) || currentActiveStop;
+
   return (
     <div className="route-main">
       <div className="store-page-header">
         <div>
           <div className="store-page-meta">
             <span className="wp-state wp-state-success">Route Active</span>
-            <span className="font-mono store-outlet-id">VEH037</span>
+            <span className="font-mono store-outlet-id">{routeInfo.vehicleId}</span>
           </div>
-          <h1 className="wp-headline-md store-page-title">Route R025229</h1>
-          <p className="wp-subtext store-page-subtitle">Coastal corridor · Nissan Cabstar · 1 of 4 stops delivered</p>
+          <h1 className="wp-headline-md store-page-title">Route {routeInfo.routeId}</h1>
+          <p className="wp-subtext store-page-subtitle">{routeInfo.corridor}</p>
         </div>
         <div className="route-tools">
           <span
@@ -254,7 +322,10 @@ export default function DriverRoutePage() {
             <Database size={13} />
             Sync <strong className="font-mono" id="sync-queue-count">3</strong>
           </span>
-          <Link href="/driver/pod" className="wp-btn wp-btn-primary">
+          <Link
+            href={`/driver/pod?stopId=${encodeURIComponent(currentActiveStop?.id || '')}&deliveryCode=${encodeURIComponent(currentActiveStop?.deliveryId || '')}&orderId=${encodeURIComponent(currentActiveStop?.orderId || '')}`}
+            className="wp-btn wp-btn-primary"
+          >
             Capture POD
           </Link>
           <button
@@ -529,7 +600,7 @@ export default function DriverRoutePage() {
             <div className="wp-drawer-grabber"></div>
             <div className="wp-drawer-header">
               <div>
-                <span className="wp-label">Stop 2 · OUT002 Fresh Duplication Rd</span>
+                <span className="wp-label">Stop {selectedStop.seq} · {selectedStop.outletId} {selectedStop.outletName}</span>
                 <h2 className="wp-headline-sm" style={{ margin: '0.25rem 0 0' }}>Current Stop Details</h2>
               </div>
               <button
@@ -545,12 +616,12 @@ export default function DriverRoutePage() {
               <div className="wp-split wp-split-subpanel">
                 <div>
                   <span className="wp-label" style={{ fontSize: '0.65rem' }}>Window Deadline</span>
-                  <p className="font-mono" style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0.2rem 0 0' }}>08:00 AM SLST</p>
-                  <span className="wp-subtext" style={{ fontSize: '0.75rem' }}>1h 42m slack remaining</span>
+                  <p className="font-mono" style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0.2rem 0 0' }}>{selectedStop.windowCloses || '08:00 AM SLST'}</p>
+                  <span className="wp-subtext" style={{ fontSize: '0.75rem' }}>{selectedStop.windowSlack || '1h 15m'} slack remaining</span>
                 </div>
                 <div>
                   <span className="wp-label" style={{ fontSize: '0.65rem' }}>Road Access Rule</span>
-                  <p className="wp-meta-inline" style={{ margin: '0.2rem 0 0' }}>Van only street loading</p>
+                  <p className="wp-meta-inline" style={{ margin: '0.2rem 0 0' }}>{selectedStop.accessChip}</p>
                 </div>
               </div>
 
@@ -560,24 +631,26 @@ export default function DriverRoutePage() {
                   <img src="/assets/products/organic-rice.jpg" className="wp-product-thumb" alt="Rice" />
                 </div>
                 <div>
-                  <strong style={{ fontSize: '0.85rem', display: 'block' }}>Order DEL-88402 (2,100 kg · 5.4 m³)</strong>
+                  <strong style={{ fontSize: '0.85rem', display: 'block' }}>Order {selectedStop.deliveryId}</strong>
                   <p className="wp-subtext" style={{ margin: '0.15rem 0 0', fontSize: '0.8rem' }}>
-                    80 Bakery Bread Bundles &amp; 45 Dry Pulse Sacks · Ambient cargo ready for curbside offload
+                    {selectedStop.cargo && selectedStop.cargo.length > 0
+                      ? selectedStop.cargo.map((c) => `${c.name} (${c.sub})`).join(' · ')
+                      : 'Standard retail store supply manifest'}
                   </p>
                 </div>
               </div>
 
               <div className="wp-panel" style={{ padding: '1.75rem', marginBottom: '1.5rem' }}>
-                <span className="wp-label" style={{ display: 'block', marginBottom: '0.75rem' }}>Stop 2 Navigation Detail</span>
-                <h3 className="wp-title-md" style={{ margin: '0 0 0.25rem' }}>No. 42 Duplication Road, Colombo 03</h3>
-                <p className="wp-subtext" style={{ fontSize: '0.8rem', margin: '0 0 1.25rem' }}>Fresh Supermarket Retail Store Entrance</p>
+                <span className="wp-label" style={{ display: 'block', marginBottom: '0.75rem' }}>Stop {selectedStop.seq} Navigation Detail</span>
+                <h3 className="wp-title-md" style={{ margin: '0 0 0.25rem' }}>{selectedStop.outletName}</h3>
+                <p className="wp-subtext" style={{ fontSize: '0.8rem', margin: '0 0 1.25rem' }}>{selectedStop.meta}</p>
 
                 <div className="wp-subpanel" style={{ padding: '1rem', marginBottom: '1.25rem' }}>
                   <span className="wp-label" style={{ fontSize: '0.65rem' }}>Dock Constraints &amp; Access</span>
                   <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.15rem', fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--wp-subtext)' }}>
-                    <li>Street curb unloading bay restricted to vans only.</li>
+                    <li>{selectedStop.accessType === 'van_only' ? 'Street curb unloading bay restricted to vans only.' : 'Rear dock bay access for commercial vehicles.'}</li>
                     <li>Clearance limitation: 3.2m height.</li>
-                    <li>Store staff buzzer active at side door.</li>
+                    <li>Store staff buzzer active at receiving door.</li>
                   </ul>
                 </div>
 
@@ -585,9 +658,13 @@ export default function DriverRoutePage() {
                   <div className="wp-flex-between">
                     <div>
                       <span className="wp-label" style={{ fontSize: '0.65rem' }}>Store Receiver Contact</span>
-                      <p className="font-laro" style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0.2rem 0 0' }}>Anjali Jayawardena</p>
+                      <p className="font-laro" style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0.2rem 0 0' }}>{selectedStop.receiver}</p>
                     </div>
-                    <Link href="/driver/pod" className="wp-btn wp-btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}>
+                    <Link
+                      href={`/driver/pod?stopId=${encodeURIComponent(selectedStop?.id || '')}&deliveryCode=${encodeURIComponent(selectedStop?.deliveryId || '')}&orderId=${encodeURIComponent(selectedStop?.orderId || '')}`}
+                      className="wp-btn wp-btn-primary"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
+                    >
                       Proceed to POD
                     </Link>
                   </div>

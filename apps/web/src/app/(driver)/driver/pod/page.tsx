@@ -1,40 +1,116 @@
-"use client";
+'use client';
 
-import React, { useRef, useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useRef, useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 
-export default function DriverPodPage() {
+interface StopCargoItem {
+  name: string;
+  qty: string;
+}
+
+interface LoadedStop {
+  id: string;
+  seq: number;
+  deliveryCode: string;
+  orderId?: string;
+  outletCode: string;
+  outletName: string;
+  receiverName?: string;
+  cargo: StopCargoItem[];
+}
+
+function DriverPodContent() {
+  const searchParams = useSearchParams();
+  const paramStopId = searchParams.get('stopId') || '';
+  const paramDeliveryCode = searchParams.get('deliveryCode') || '';
+  const paramOrderId = searchParams.get('orderId') || '';
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
-  const [receiverName, setReceiverName] = useState("Anjali Jayawardena");
+  const [receiverName, setReceiverName] = useState('Anjali Jayawardena');
   const [verifiedQty, setVerifiedQty] = useState(true);
   const [photoCaptured, setPhotoCaptured] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [podSuccess, setPodSuccess] = useState<string | null>(null);
   const [podError, setPodError] = useState<string | null>(null);
 
+  const [activeStop, setActiveStop] = useState<LoadedStop>({
+    id: paramStopId || 'stop-1',
+    seq: 1,
+    deliveryCode: paramDeliveryCode || 'DEL_88401',
+    orderId: paramOrderId || 'ORD_92301',
+    outletCode: 'OUT001',
+    outletName: 'Fresh Galle Rd',
+    receiverName: 'Anjali Jayawardena',
+    cargo: [
+      { name: 'Dairy cases', qty: '42' },
+      { name: 'Curd trays', qty: '18' },
+      { name: 'Ice cream', qty: '6' },
+    ],
+  });
+
+  useEffect(() => {
+    fetch('/api/driver/route')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error && data.stops && data.stops.length > 0) {
+          const match =
+            data.stops.find(
+              (s: any) =>
+                (paramStopId && s.id === paramStopId) ||
+                (paramDeliveryCode && s.deliveryCode === paramDeliveryCode) ||
+                (paramOrderId && s.orderId === paramOrderId),
+            ) ||
+            data.stops.find((s: any) => s.status !== 'Delivered') ||
+            data.stops[0];
+
+          if (match) {
+            setActiveStop({
+              id: match.id,
+              seq: match.seq,
+              deliveryCode: match.deliveryCode,
+              orderId: match.orderId,
+              outletCode: match.outletCode,
+              outletName: match.outletName,
+              receiverName: match.receiverName || 'Anjali Jayawardena',
+              cargo: (match.cargo || []).map((c: any) => ({
+                name: c.name,
+                qty: c.qty || '1',
+              })),
+            });
+            if (match.receiverName) {
+              setReceiverName(match.receiverName);
+            }
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load driver route for POD:', err));
+  }, [paramStopId, paramDeliveryCode, paramOrderId]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#0f172a";
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#0f172a';
   }, []);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     setIsDrawing(true);
     setHasSignature(true);
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -44,12 +120,12 @@ export default function DriverPodPage() {
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
 
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -62,7 +138,7 @@ export default function DriverPodPage() {
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
@@ -75,41 +151,55 @@ export default function DriverPodPage() {
     setPodError(null);
 
     try {
-      const res = await fetch("/api/driver/pod", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/driver/pod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deliveryCode: "DEL_88401",
+          deliveryCode: activeStop.deliveryCode,
+          stopId: activeStop.id,
+          orderId: activeStop.orderId,
           receiverName,
           verifiedQty,
           photoCaptured,
-          signatureData: hasSignature ? "signature_blob_captured" : null,
+          signatureData: hasSignature ? 'signature_blob_captured' : null,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setPodSuccess(`Proof of delivery ${data.podId} recorded successfully. Stop 2 marked Delivered.`);
+        setPodSuccess(`Proof of delivery recorded for ${activeStop.deliveryCode}. Stop marked Delivered and Order status updated.`);
       } else {
-        setPodError(data.error || "Failed to record proof of delivery");
+        setPodError(data.error || 'Failed to record proof of delivery');
       }
     } catch {
-      setPodError("Network error while submitting proof of delivery");
+      setPodError('Network error while submitting proof of delivery');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const totalUnits = activeStop.cargo.reduce((sum, item) => {
+    const num = parseInt(item.qty.replace(/[^0-9]/g, ''), 10);
+    return sum + (isNaN(num) ? 1 : num);
+  }, 0) || 66;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div className="screen-page-header">
         <div>
-          <span className="wp-label">DRV 04 · OUT001</span>
-          <h1 className="wp-headline-md" style={{ margin: "0.35rem 0 0" }}>
+          <span className="wp-label">DRV 04 · {activeStop.outletCode}</span>
+          <h1 className="wp-headline-md" style={{ margin: '0.35rem 0 0' }}>
             Proof of delivery
           </h1>
+          <p className="wp-subtext" style={{ margin: '0.15rem 0 0' }}>
+            {activeStop.outletName} · {activeStop.deliveryCode}
+          </p>
         </div>
-        <Link href="/store/receipt" className="wp-btn wp-btn-outline" style={{ fontSize: "0.75rem", padding: "0.45rem 0.85rem" }}>
+        <Link
+          href={`/store/receipt?orderId=${encodeURIComponent(activeStop.orderId || activeStop.deliveryCode)}`}
+          className="wp-btn wp-btn-outline"
+          style={{ fontSize: '0.75rem', padding: '0.45rem 0.85rem' }}
+        >
           Store receipt
         </Link>
       </div>
@@ -117,48 +207,72 @@ export default function DriverPodPage() {
       {podSuccess && (
         <div
           style={{
-            padding: "0.85rem 1.25rem",
-            background: "var(--wp-card-bg, #f0fdf4)",
-            border: "1px solid var(--wp-success, #22c55e)",
-            borderRadius: "var(--wp-radius-sm, 6px)",
-            fontSize: "0.85rem",
+            padding: '1rem 1.25rem',
+            background: 'var(--wp-card-bg, #f0fdf4)',
+            border: '1px solid var(--wp-success, #22c55e)',
+            borderRadius: 'var(--wp-radius-sm, 6px)',
+            fontSize: '0.9rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
           }}
         >
-          ✓ {podSuccess}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#16a34a', fontWeight: 600 }}>
+            <CheckCircle2 size={18} />
+            <span>{podSuccess}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <Link
+              href={`/store/receipt?orderId=${encodeURIComponent(activeStop.orderId || activeStop.deliveryCode)}`}
+              className="wp-btn wp-btn-primary"
+              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+            >
+              Confirm in Store Receipt <ArrowRight size={14} style={{ marginLeft: 4 }} />
+            </Link>
+            <Link
+              href="/driver/route"
+              className="wp-btn wp-btn-outline"
+              style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+            >
+              Back to Driver Route
+            </Link>
+          </div>
         </div>
       )}
 
       {podError && (
         <div
           style={{
-            padding: "0.85rem 1.25rem",
-            background: "rgba(220, 38, 38, 0.08)",
-            border: "1px solid #DC2626",
-            borderRadius: "var(--wp-radius-sm, 6px)",
-            fontSize: "0.85rem",
-            color: "#DC2626",
+            padding: '0.85rem 1.25rem',
+            background: 'rgba(220, 38, 38, 0.08)',
+            border: '1px solid #DC2626',
+            borderRadius: 'var(--wp-radius-sm, 6px)',
+            fontSize: '0.85rem',
+            color: '#DC2626',
           }}
         >
           ⚠ {podError}
         </div>
       )}
 
-      <div className="screen-grid-2" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "1.25rem" }}>
+      <div className="screen-grid-2" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.25rem' }}>
         {/* POD Form */}
-        <section className="wp-panel screen-panel" style={{ padding: "1.25rem" }}>
-          <form onSubmit={handleSubmitPod} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+        <section className="wp-panel screen-panel" style={{ padding: '1.25rem' }}>
+          <form onSubmit={handleSubmitPod} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={verifiedQty}
                 onChange={(e) => setVerifiedQty(e.target.checked)}
-                style={{ width: "1.1rem", height: "1.1rem" }}
+                style={{ width: '1.1rem', height: '1.1rem' }}
               />
-              <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Quantities verified (66 units)</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                Quantities verified ({totalUnits} units)
+              </span>
             </label>
 
             <div className="wp-field">
-              <label style={{ display: "block", marginBottom: "0.35rem", fontSize: "0.8rem", fontWeight: 600 }}>
+              <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.8rem', fontWeight: 600 }}>
                 Receiver name
               </label>
               <input
@@ -166,32 +280,32 @@ export default function DriverPodPage() {
                 value={receiverName}
                 onChange={(e) => setReceiverName(e.target.value)}
                 required
-                style={{ width: "100%", padding: "0.5rem" }}
+                style={{ width: '100%', padding: '0.5rem' }}
               />
             </div>
 
             <div className="wp-field">
-              <label style={{ display: "block", marginBottom: "0.35rem", fontSize: "0.8rem", fontWeight: 600 }}>
+              <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.8rem', fontWeight: 600 }}>
                 Photo Evidence
               </label>
               <div
                 className="wp-panel"
                 onClick={() => setPhotoCaptured(!photoCaptured)}
                 style={{
-                  padding: "1.5rem",
-                  textAlign: "center",
-                  borderStyle: "dashed",
-                  cursor: "pointer",
-                  background: photoCaptured ? "var(--wp-card-bg, #f0fdf4)" : "var(--wp-subpanel, #f8fafc)",
-                  borderColor: photoCaptured ? "var(--wp-success)" : "var(--wp-border-color)",
+                  padding: '1.5rem',
+                  textAlign: 'center',
+                  borderStyle: 'dashed',
+                  cursor: 'pointer',
+                  background: photoCaptured ? 'var(--wp-card-bg, #f0fdf4)' : 'var(--wp-subpanel, #f8fafc)',
+                  borderColor: photoCaptured ? 'var(--wp-success)' : 'var(--wp-border-color)',
                 }}
               >
                 {photoCaptured ? (
-                  <span style={{ color: "var(--wp-success)", fontWeight: 700, fontSize: "0.85rem" }}>
+                  <span style={{ color: 'var(--wp-success)', fontWeight: 700, fontSize: '0.85rem' }}>
                     ✓ Delivery Photo Attached (Peliyagoda Bay Seal & Store Coolroom)
                   </span>
                 ) : (
-                  <span className="wp-subtext" style={{ fontSize: "0.85rem" }}>
+                  <span className="wp-subtext" style={{ fontSize: '0.85rem' }}>
                     📷 Tap to capture or upload delivery photo
                   </span>
                 )}
@@ -199,23 +313,23 @@ export default function DriverPodPage() {
             </div>
 
             <div className="wp-field">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Receiver Signature</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Receiver Signature</label>
                 <button
                   type="button"
                   className="mc-link"
                   onClick={clearCanvas}
-                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem" }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem' }}
                 >
                   Clear signature
                 </button>
               </div>
-              <div style={{ border: "1px solid var(--wp-border-color, #cbd5e1)", borderRadius: "4px", background: "#fff" }}>
+              <div style={{ border: '1px solid var(--wp-border-color, #cbd5e1)', borderRadius: '4px', background: '#fff' }}>
                 <canvas
                   ref={canvasRef}
                   width={420}
                   height={110}
-                  style={{ width: "100%", height: "110px", display: "block", touchAction: "none", cursor: "crosshair" }}
+                  style={{ width: '100%', height: '110px', display: 'block', touchAction: 'none', cursor: 'crosshair' }}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -227,16 +341,16 @@ export default function DriverPodPage() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
               <button
                 type="submit"
                 className="wp-btn wp-btn-primary"
                 disabled={submitting}
                 style={{ flex: 1 }}
               >
-                {submitting ? "Transmitting POD..." : "Submit POD"}
+                {submitting ? 'Transmitting POD...' : 'Submit POD'}
               </button>
-              <Link href="/driver" className="wp-btn wp-btn-outline">
+              <Link href="/driver/route" className="wp-btn wp-btn-outline">
                 Back to route
               </Link>
             </div>
@@ -244,32 +358,46 @@ export default function DriverPodPage() {
         </section>
 
         {/* Aside: Stop Details */}
-        <aside className="wp-panel screen-panel" style={{ padding: "1.25rem" }}>
-          <span className="wp-label">Stop 2 · OUT001</span>
-          <h2 className="wp-headline-sm" style={{ margin: "0.35rem 0 1rem" }}>
-            Fresh Galle Rd
+        <aside className="wp-panel screen-panel" style={{ padding: '1.25rem' }}>
+          <span className="wp-label">Stop {activeStop.seq} · {activeStop.outletCode}</span>
+          <h2 className="wp-headline-sm" style={{ margin: '0.35rem 0 1rem' }}>
+            {activeStop.outletName}
           </h2>
-          <div className="screen-list" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--wp-border-color)" }}>
-              <span>Dairy cases</span>
-              <strong className="font-mono">42</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--wp-border-color)" }}>
-              <span>Curd trays</span>
-              <strong className="font-mono">18</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0" }}>
-              <span>Ice cream</span>
-              <strong className="font-mono">6</strong>
-            </div>
+          <div className="screen-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {activeStop.cargo.map((item, idx) => (
+              <div
+                key={`${item.name}-${idx}`}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0',
+                  borderBottom: idx < activeStop.cargo.length - 1 ? '1px solid var(--wp-border-color)' : 'none',
+                }}
+              >
+                <span>{item.name}</span>
+                <strong className="font-mono">{item.qty}</strong>
+              </div>
+            ))}
           </div>
-          <div style={{ marginTop: "1.5rem" }}>
-            <Link href="/store/receipt" className="mc-link" style={{ fontSize: "0.8rem" }}>
+          <div style={{ marginTop: '1.5rem' }}>
+            <Link
+              href={`/store/receipt?orderId=${encodeURIComponent(activeStop.orderId || activeStop.deliveryCode)}`}
+              className="mc-link"
+              style={{ fontSize: '0.8rem' }}
+            >
               Store receipt view →
             </Link>
           </div>
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function DriverPodPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Loading Proof of Delivery...</div>}>
+      <DriverPodContent />
+    </Suspense>
   );
 }

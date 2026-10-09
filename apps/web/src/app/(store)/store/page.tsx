@@ -68,29 +68,40 @@ export default function StorePortalPage() {
     };
   }, []);
 
-  const handleConfirmReceipt = (deliveryId: string) => {
+  const handleConfirmReceipt = async (deliveryId: string) => {
     setConfirmingId(deliveryId);
-    setTimeout(() => {
-      setData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          deliveries: prev.deliveries.map((d) =>
-            d.id === deliveryId
-              ? {
-                  ...d,
-                  status: "Verified",
-                  statusBadge: "Verified",
-                  canConfirm: false,
-                  actionLabel: "Receipt signed",
-                }
-              : d
-          ),
-        };
+    const orderIdMatch = deliveryId.replace(/^del_/, "");
+    try {
+      await fetch("/api/store/receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: orderIdMatch,
+          notes: "Confirmed directly via store management portal dashboard",
+        }),
       });
-      setConfirmingId(null);
-      setReceiptSuccess("Delivery receipt successfully confirmed and signed digitally.");
-    }, 400);
+    } catch (err) {
+      console.error("Failed to persist receipt confirmation", err);
+    }
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        deliveries: prev.deliveries.map((d) =>
+          d.id === deliveryId
+            ? {
+                ...d,
+                status: "Verified",
+                statusBadge: "Verified",
+                canConfirm: false,
+                actionLabel: "Receipt signed",
+              }
+            : d
+        ),
+      };
+    });
+    setConfirmingId(null);
+    setReceiptSuccess("Delivery receipt successfully confirmed and signed digitally.");
   };
 
   if (loading || !data) {

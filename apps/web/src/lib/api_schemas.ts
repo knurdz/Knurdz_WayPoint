@@ -49,6 +49,8 @@ export const driverIssueSchema = z.object({
 export const driverPodSchema = z
   .object({
     deliveryCode: z.string().trim().min(1, 'Delivery code is required'),
+    stopId: z.string().optional(),
+    orderId: z.string().optional(),
     receiverName: z.string().optional(),
     signatureData: z.string().nullable().optional(),
     photoCaptured: z.boolean().optional(),

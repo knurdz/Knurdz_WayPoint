@@ -113,6 +113,7 @@ export async function GET() {
 
       return {
         id: stop.id,
+        orderId: stop.orderId,
         seq: stop.stopSequence,
         deliveryCode: `DEL_${stop.orderId.replace(/[^0-9]/g, '') || String(88400 + stop.stopSequence)}`,
         outletCode: stop.outletId,
