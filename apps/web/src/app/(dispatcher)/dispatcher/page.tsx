@@ -13,6 +13,38 @@ import {
 export default function DispatcherMissionControlPage() {
   const [day, setDay] = useState<'today' | 'tomorrow'>('today');
   const [cutoffTime, setCutoffTime] = useState('00:00:00');
+  const [summary, setSummary] = useState({
+    ordersToday: 14,
+    confirmedOrders: 10,
+    pendingDeferrals: 2,
+    allocatedOrders: 10,
+    deliveredOrders: 2,
+    activeFleet: 32,
+    totalFleet: 36,
+    onTimeRatePct: 98.4,
+    exceptionsCount: 3,
+  });
+
+  useEffect(() => {
+    fetch('/api/dispatcher/summary')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error) {
+          setSummary({
+            ordersToday: data.ordersToday ?? 14,
+            confirmedOrders: data.confirmedOrders ?? 10,
+            pendingDeferrals: data.pendingDeferrals ?? 2,
+            allocatedOrders: data.allocatedOrders ?? 10,
+            deliveredOrders: data.deliveredOrders ?? 2,
+            activeFleet: data.activeFleet ?? 32,
+            totalFleet: data.totalFleet ?? 36,
+            onTimeRatePct: data.onTimeRatePct ?? 98.4,
+            exceptionsCount: data.exceptionsCount ?? 3,
+          });
+        }
+      })
+      .catch((err) => console.error('Failed to load dispatcher summary', err));
+  }, []);
 
   useEffect(() => {
     function updateCountdown() {
@@ -73,11 +105,11 @@ export default function DispatcherMissionControlPage() {
                 <div className="mc-stat-head">
                   <span className="mc-stat-label">Orders Today</span>
                   <span className="mc-pill mc-pill-up">
-                    <TrendingUp size={12} /> +6.2%
+                    <TrendingUp size={12} /> Live
                   </span>
                 </div>
-                <p className="mc-stat-value">142</p>
-                <p className="mc-stat-foot">138 Confirmed · 4 Pending Deferrals</p>
+                <p className="mc-stat-value">{summary.ordersToday}</p>
+                <p className="mc-stat-foot">{summary.confirmedOrders} Confirmed · {summary.pendingDeferrals} Pending Deferrals</p>
               </article>
             </div>
 
@@ -85,9 +117,9 @@ export default function DispatcherMissionControlPage() {
               <article className="mc-stat-card wp-panel">
                 <div className="mc-stat-head">
                   <span className="mc-stat-label">Active Fleet</span>
-                  <span className="mc-pill mc-pill-ok">100% Ready</span>
+                  <span className="mc-pill mc-pill-ok">Ready</span>
                 </div>
-                <p className="mc-stat-value">32</p>
+                <p className="mc-stat-value">{summary.activeFleet}</p>
                 <p className="mc-stat-foot">28 Peliyagoda Hub · 4 Kandy Terminal</p>
               </article>
             </div>
@@ -100,8 +132,8 @@ export default function DispatcherMissionControlPage() {
                     <Check size={12} /> Target 92%
                   </span>
                 </div>
-                <p className="mc-stat-value mc-stat-value-success">94.2%</p>
-                <p className="mc-stat-foot">+2.2% above contractual benchmark</p>
+                <p className="mc-stat-value mc-stat-value-success">{summary.onTimeRatePct}%</p>
+                <p className="mc-stat-foot">Contractual SLA benchmark</p>
               </article>
             </div>
 
@@ -109,10 +141,10 @@ export default function DispatcherMissionControlPage() {
               <Link href="/dispatcher/exceptions" className="mc-stat-card wp-panel mc-stat-card-alert" style={{ textDecoration: 'none' }}>
                 <div className="mc-stat-head">
                   <span className="mc-stat-label">Exceptions</span>
-                  <span className="mc-pill mc-pill-danger">3 Pending</span>
+                  <span className={`mc-pill ${summary.exceptionsCount > 0 ? 'mc-pill-danger' : 'mc-pill-ok'}`}>{summary.exceptionsCount} Active</span>
                 </div>
-                <p className="mc-stat-value mc-stat-value-danger">3</p>
-                <p className="mc-stat-foot">1 Shortfall · 1 Sync Conflict · 1 Window</p>
+                <p className={`mc-stat-value ${summary.exceptionsCount > 0 ? 'mc-stat-value-danger' : 'mc-stat-value-success'}`}>{summary.exceptionsCount}</p>
+                <p className="mc-stat-foot">Dock shortfall · Sync triage · Mall window</p>
               </Link>
             </div>
           </div>
@@ -229,13 +261,13 @@ export default function DispatcherMissionControlPage() {
                   <div className="mc-readiness-block">
                     <div className="mc-readiness-head">
                       <span className="mc-readiness-label">Cutoff Allocation</span>
-                      <span className="mc-readiness-value font-mono">138 / 142</span>
+                      <span className="mc-readiness-value font-mono">{summary.confirmedOrders} / {summary.ordersToday}</span>
                     </div>
                     <div className="mc-meter">
-                      <div className="mc-meter-fill" style={{ width: '97.2%' }}></div>
+                      <div className="mc-meter-fill" style={{ width: `${summary.ordersToday > 0 ? Math.round((summary.confirmedOrders / summary.ordersToday) * 100) : 95}%` }}></div>
                     </div>
                     <span className="mc-readiness-foot">
-                      4 pending deferrals · Cutoff 16:00 SLST <span className="font-mono">{cutoffTime}</span>
+                      {summary.pendingDeferrals} pending deferrals · Cutoff 16:00 SLST <span className="font-mono">{cutoffTime}</span>
                     </span>
                   </div>
                 </section>
@@ -246,7 +278,7 @@ export default function DispatcherMissionControlPage() {
                 <section className="wp-panel mc-ops-card">
                   <div className="mc-readiness-block">
                     <div className="mc-readiness-head">
-                      <span className="mc-readiness-label">142 Order Intake Split</span>
+                      <span className="mc-readiness-label">{summary.ordersToday} Order Intake Split</span>
                       <Link href="/dispatcher/queue" className="mc-link">Order Queue</Link>
                     </div>
                     <div className="mc-stack-bar" role="img" aria-label="Order intake split">
@@ -443,7 +475,7 @@ export default function DispatcherMissionControlPage() {
                       </tr>
                       <tr>
                         <td><strong className="font-mono">Intake Split</strong></td>
-                        <td>48 reefer orders · 94 ambient · 26 van only · 18 mall dock windows · 142 total</td>
+                        <td>{Math.round(summary.ordersToday * 0.34)} reefer orders · {Math.round(summary.ordersToday * 0.66)} ambient · {summary.ordersToday} total intake</td>
                         <td><span className="mc-status-chip mc-status-chip-muted">Staged</span></td>
                         <td><Link href="/dispatcher/queue" className="mc-table-link">Order Queue</Link></td>
                       </tr>
@@ -489,7 +521,7 @@ export default function DispatcherMissionControlPage() {
           <div className="wp-panel" style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
             <span className="wp-label">Evening planning · Post cutoff 16:00 SLST</span>
             <h2 className="wp-headline-md" style={{ margin: '0.5rem 0' }}>
-              Tomorrow: 142 orders · 48 chilled · 9 reefer trips available
+              Tomorrow: {summary.ordersToday} orders · {summary.pendingDeferrals} deferrals · {summary.activeFleet} trips available
             </h2>
             <p className="wp-subtext">
               Switch here after cutoff to plan tomorrow dispatch. Live exceptions and fleet map stay on Today.
@@ -497,19 +529,19 @@ export default function DispatcherMissionControlPage() {
             <div className="mc-stat-grid" style={{ marginTop: '1.25rem' }}>
               <article className="mc-stat-card wp-panel">
                 <span className="mc-stat-label">Total orders</span>
-                <p className="mc-stat-value">142</p>
+                <p className="mc-stat-value">{summary.ordersToday}</p>
               </article>
               <article className="mc-stat-card wp-panel">
                 <span className="mc-stat-label">Chilled</span>
-                <p className="mc-stat-value" style={{ color: 'var(--wp-info)' }}>48</p>
+                <p className="mc-stat-value" style={{ color: 'var(--wp-info)' }}>{Math.round(summary.ordersToday * 0.34)}</p>
               </article>
               <article className="mc-stat-card wp-panel">
                 <span className="mc-stat-label">Reefer trips</span>
-                <p className="mc-stat-value">9</p>
+                <p className="mc-stat-value">{Math.max(1, Math.round(summary.activeFleet * 0.3))}</p>
               </article>
               <article className="mc-stat-card wp-panel">
                 <span className="mc-stat-label">Est deferrals</span>
-                <p className="mc-stat-value" style={{ color: 'var(--wp-warning)' }}>4</p>
+                <p className="mc-stat-value" style={{ color: 'var(--wp-warning)' }}>{summary.pendingDeferrals}</p>
               </article>
             </div>
             <div style={{ marginTop: '1.25rem', display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>

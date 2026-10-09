@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCutoffCountdown } from "@/hooks/useCutoffCountdown";
@@ -13,8 +13,20 @@ export default function StoreOrderPage() {
   const [ambientWeight, setAmbientWeight] = useState("2100");
   const [chilledProduct, setChilledProduct] = useState("Dairy cases, curd, ice cream");
   const [chilledWeight, setChilledWeight] = useState("4850");
+  const [outletCode, setOutletCode] = useState("OUT001");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user?.outletId) {
+          setOutletCode(data.user.outletId);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +42,7 @@ export default function StoreOrderPage() {
           ambientWeight: Number(ambientWeight),
           chilledProduct,
           chilledWeight: Number(chilledWeight),
-          outletCode: "OUT001",
+          outletCode: outletCode || "OUT001",
         }),
       });
 

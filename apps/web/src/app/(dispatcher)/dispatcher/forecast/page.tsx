@@ -39,7 +39,7 @@ export default function DispatcherForecastPage() {
             Next Week Demand Forecast
           </h1>
           <p className="wp-subtext" style={{ margin: 0, color: '#64748B', fontSize: 13 }}>
-            Simulated Datathon volume by depot and temperature compartment · ISO week 40
+            Simulated operational volume by depot and temperature compartment · ISO week 40
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

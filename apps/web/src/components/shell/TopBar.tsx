@@ -183,7 +183,7 @@ export default function TopBar({
                     style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}
                   >
                     <PlusCircle size={14} />
-                    <span>Review Queue (142)</span>
+                    <span>Review Queue</span>
                   </Link>
                 )}
               </>

@@ -22,7 +22,10 @@ export default function LoaderDepotPage() {
             Select warehouse context
           </h1>
         </div>
-        <Link href="/loader/runs" className="wp-btn wp-btn-primary wp-text-xs wp-pad-sm">
+        <Link
+          href={`/loader/runs?depot=${encodeURIComponent(selectedDepot)}&date=${encodeURIComponent(date)}`}
+          className="wp-btn wp-btn-primary wp-text-xs wp-pad-sm"
+        >
           Continue
         </Link>
       </div>
@@ -64,7 +67,11 @@ export default function LoaderDepotPage() {
             Published plans only · last sync 04:12 AM
           </p>
 
-          <Link href="/loader/runs" className="wp-btn wp-btn-primary wp-mt-md" style={{ display: "inline-block" }}>
+          <Link
+            href={`/loader/runs?depot=${encodeURIComponent(selectedDepot)}&date=${encodeURIComponent(date)}`}
+            className="wp-btn wp-btn-primary wp-mt-md"
+            style={{ display: "inline-block" }}
+          >
             Continue to vehicle runs
           </Link>
         </section>
